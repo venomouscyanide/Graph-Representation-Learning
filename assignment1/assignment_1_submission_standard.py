@@ -27,10 +27,10 @@ class Hyperparameters:
     EMBEDDINGS_SIZE: int = 8
     LEARNING_RATE: float = 0.01
     WEIGHT_DECAY: float = 1e-5
-    TRAINING_RATIO: float = 0.10
+    TRAINING_RATIO: float = 0.70
     DATASET: str = "KarateClub"
-    EPOCHS: int = 500
-    ERROR_THRESHOLD: float = 1
+    EPOCHS: int = 1000
+    ERROR_THRESHOLD: torch.FloatTensor = torch.FloatTensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10])
 
 
 class CreateNodeFeatureTensor:
@@ -98,12 +98,10 @@ class TrainAndEvaluate:
             model.train_helper(self.target, epoch, viz_training)
         return model
 
-    def evaluate(self, trained_model: GCN):
+    def evaluate(self, trained_model: GCN) -> float:
         trained_model.eval()
         out_tensor = trained_model(self.data.x, self.data.edge_index)
-        out_numpy = out_tensor.detach().numpy()
-        target_numpy = self.target.detach().numpy()
-        print(self._get_accuracy(out_tensor))
+        return self._get_accuracy(out_tensor)
 
     def _set_train_test_mask(self):
         # set train and test mask according to how you set the training ratio hyperparameter
@@ -127,31 +125,26 @@ class TrainAndEvaluate:
         self.data.test_mask = test_mask
         self.data.train_mask = train_mask
 
-    def _get_accuracy(self, out):
+    def _get_accuracy(self, out: torch.tensor) -> float:
         # for some reason cosine sim is giving high similarity no matter what
-        # define a custom accuracy metric
         # cosine_sim = torch.nn.functional.cosine_similarity(x1=out[self.data.test_mask],
         #                                                    x2=self.target[self.data.test_mask], dim=1)
-        a = out[self.data.train_mask].detach().numpy()
-        b = self.target[self.data.train_mask].detach().numpy()
-        # cosine_sim_numpy = cosine_sim.detach().numpy()
-        # print(cosine_sim_numpy)
-        diff_tensor = torch.abs(out - self.target)
-        denom = int(torch.bincount(data.test_mask.to(int))[1])
-        num_tensor = torch.flatten(diff_tensor.le(Hyperparameters.ERROR_THRESHOLD).to(torch.int32))
-        num = int(torch.bincount(num_tensor)[1])
-        # print(data.train_mask)
-        # cdist = torch.cdist(out, self.target, p=2)
-        # cdist = torch.cdist(out[self.data.test_mask], self.target[self.data.test_mask], p=2)
-        # print(cdist)
-        accuracy = num / denom * 100
+        # define a custom accuracy metric
+        # all the output values must be within the threshold defined in Hyperparameters.ERROR_THRESHOLD
+
+        diff_tensor = torch.abs(out[self.data.test_mask] - self.target[self.data.test_mask])
+        within_threshold = torch.le(diff_tensor, Hyperparameters.ERROR_THRESHOLD)
+        numerator = int(torch.count_nonzero(within_threshold == True))
+        denominator = diff_tensor.shape[0] * diff_tensor.shape[1]
+        accuracy = round(numerator / denominator * 100, 4)
         return accuracy
 
 
 if __name__ == '__main__':
     # data = Planetoid(root="delete_me/", name="Cora")[0]
+    torch.manual_seed(13)
     show_dataset_stats(KarateClub())
     data = KarateClub()[0]
     train_and_eval = TrainAndEvaluate(data)
     trained_model = train_and_eval.train_helper(False)
-    train_and_eval.evaluate(trained_model)
+    print(train_and_eval.evaluate(trained_model))
