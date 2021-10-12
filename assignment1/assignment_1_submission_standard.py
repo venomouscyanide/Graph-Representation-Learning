@@ -1,6 +1,8 @@
+import itertools
 import random
 from typing import List
 
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data, Dataset
@@ -32,6 +34,15 @@ class Hyperparameters:
     EPOCHS: int = 1000
     ERROR_THRESHOLD: torch.FloatTensor = torch.FloatTensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10])
 
+    @staticmethod
+    def override_defaults(*args):
+        Hyperparameters.EMBEDDINGS_SIZE = args[0]
+        Hyperparameters.LEARNING_RATE = args[1]
+        Hyperparameters.WEIGHT_DECAY = args[2]
+        Hyperparameters.TRAINING_RATIO = args[3]
+        Hyperparameters.DATASET = args[4]
+        Hyperparameters.EPOCHS = args[5]
+
 
 class CreateNodeFeatureTensor:
     def create(self, data: Data):
@@ -50,6 +61,7 @@ class CreateNodeFeatureTensor:
 
 
 class GCN(torch.nn.Module):
+    # TODO: multiple regressor heads?
     # reference: https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html
 
     def __init__(self, dataset):
@@ -57,7 +69,7 @@ class GCN(torch.nn.Module):
 
         self.conv1 = GCNConv(dataset.num_node_features, 32)
         self.conv2 = GCNConv(32, 16)
-        self.conv3 = GCNConv(16, 8)
+        self.conv3 = GCNConv(16, Hyperparameters.EMBEDDINGS_SIZE)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=Hyperparameters.LEARNING_RATE,
                                           weight_decay=Hyperparameters.WEIGHT_DECAY)
@@ -74,7 +86,7 @@ class GCN(torch.nn.Module):
 
         return x
 
-    def train_helper(self, target: torch.tensor, epoch: int, viz_training: bool):
+    def train_helper(self, target: torch.tensor, epoch: int, viz_training: bool, data):
         self.optimizer.zero_grad()
         h = self(data.x, data.edge_index)
         loss = self.criterion(h[data.train_mask], target[data.train_mask])
@@ -95,7 +107,7 @@ class TrainAndEvaluate:
         self._set_train_test_mask()
         model = GCN(self.data)
         for epoch in range(Hyperparameters.EPOCHS):
-            model.train_helper(self.target, epoch, viz_training)
+            model.train_helper(self.target, epoch, viz_training, self.data)
         return model
 
     def evaluate(self, trained_model: GCN) -> float:
@@ -105,14 +117,14 @@ class TrainAndEvaluate:
 
     def _set_train_test_mask(self):
         # set train and test mask according to how you set the training ratio hyperparameter
-        set_of_all_indices = set(range(len(data.x)))
+        set_of_all_indices = set(range(len(self.data.x)))
 
-        train_mask_indices = torch.randperm(len(data.x))[:int(Hyperparameters.TRAINING_RATIO * len(data.x))]
+        train_mask_indices = torch.randperm(len(self.data.x))[:int(Hyperparameters.TRAINING_RATIO * len(self.data.x))]
         set_of_training_indices = set(train_mask_indices.detach().tolist())
         test_mask_indices = torch.tensor(list(set_of_all_indices.difference(set_of_training_indices)), dtype=int)
 
-        train_mask = torch.tensor([False for _ in range(len(data.x))], dtype=bool)
-        test_mask = torch.tensor([False for _ in range(len(data.x))], dtype=bool)
+        train_mask = torch.tensor([False for _ in range(len(self.data.x))], dtype=bool)
+        test_mask = torch.tensor([False for _ in range(len(self.data.x))], dtype=bool)
 
         train_mask[train_mask_indices] = True
         test_mask[test_mask_indices] = True
@@ -140,11 +152,71 @@ class TrainAndEvaluate:
         return accuracy
 
 
+class HyperParameterCombinations:
+    """
+    To be manually configured
+    """
+    ES = [8]
+    LR = [0.01, 0.001]
+    WD = [1e-5, 1e-3]
+    TR = [x / 10 for x in range(1, 9)]
+    DATASET = [KarateClub()]
+    EPOCHS = [250, 500, 1000]
+    ET = [torch.FloatTensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10])]
+
+
+class TrainAndCaptureResults:
+    def __init__(self):
+        self.seeds: List[int] = [7, 13, 666]
+        self.data = pd.DataFrame(
+            columns=["Embedding Size", "Learning Rate", "Weight Decay", "Training Ratio", "Dataset", "Epochs",
+                     "Error Threshold", "Avg Accuracy"])
+
+    def _setup(self):
+        combinations = [HyperParameterCombinations.ES, HyperParameterCombinations.LR, HyperParameterCombinations.WD,
+                        HyperParameterCombinations.TR, HyperParameterCombinations.DATASET,
+                        HyperParameterCombinations.EPOCHS,
+                        HyperParameterCombinations.ET]
+        return combinations
+
+    def run(self):
+        accuracies = []
+        all_combinations = list(itertools.product(*self._setup()))
+        total_combinations = len(all_combinations)
+        print(f"Total combinations to run exp on: {total_combinations}")
+        for index, combination in enumerate(all_combinations):
+            print(f"Running combination: {index + 1} of {total_combinations}")
+            combination = list(combination)
+            accuracy_sum = 0.0
+            Hyperparameters.override_defaults(*combination)
+            for seed in self.seeds:
+                torch.manual_seed(seed)
+                data = combination[4]
+                train_and_eval = TrainAndEvaluate(data[0])
+                trained_model = train_and_eval.train_helper(False)
+                accuracy_sum += train_and_eval.evaluate(trained_model)
+            avg_accuracy = round(accuracy_sum / 3, 4)
+            accuracies.append(avg_accuracy)
+            combination.append(avg_accuracy)
+            combination[4] = str(combination[4])
+            self.data.loc[len(self.data)] = combination
+        best_accuracy = max(accuracies)
+        print(f"Best accuracy: {best_accuracy}")
+        self.data.sort_values(by="Avg Accuracy", ascending=False, inplace=True)
+        return self.data
+
+
 if __name__ == '__main__':
     # data = Planetoid(root="delete_me/", name="Cora")[0]
-    torch.manual_seed(13)
+    # torch.manual_seed(13)
+    # show_dataset_stats(KarateClub())
+    # data = KarateClub()[0]
+    # train_and_eval = TrainAndEvaluate(data)
+    # trained_model = train_and_eval.train_helper(False)
+    # print(train_and_eval.evaluate(trained_model))
     show_dataset_stats(KarateClub())
-    data = KarateClub()[0]
-    train_and_eval = TrainAndEvaluate(data)
-    trained_model = train_and_eval.train_helper(False)
-    print(train_and_eval.evaluate(trained_model))
+    # show_dataset_stats(Planetoid(root="delete_me/", name="Cora"))
+    # show_dataset_stats(Planetoid(root="delete_me/", name="PubMed"))
+    # show_dataset_stats(Planetoid(root="delete_me/", name="CiteSeer"))
+    df = TrainAndCaptureResults().run()
+    print(df)
