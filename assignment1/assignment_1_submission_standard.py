@@ -5,6 +5,7 @@ from typing import List
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from cachetools import Cache
 from torch_geometric.data import Data, Dataset
 from torch_geometric.datasets import *
 from torch_geometric.nn import GCNConv
@@ -45,7 +46,10 @@ class Hyperparameters:
 
 
 class CreateNodeFeatureTensor:
-    def create(self, data: Data):
+    def create(self, data: Dataset) -> torch.tensor:
+        dataset_id = str(data)
+        if type(cache.get(dataset_id)) == torch.Tensor:
+            return cache.get(dataset_id)
         nx_graph = to_networkx(data)
         random.seed(13)
         # features captured
@@ -57,6 +61,7 @@ class CreateNodeFeatureTensor:
         ]
         features = [list(node_embedding) for node_embedding in zip(*feature_values)]
         target_tensor = torch.tensor(features, dtype=torch.float)
+        cache[dataset_id] = target_tensor
         return target_tensor
 
 
@@ -64,7 +69,7 @@ class GCN(torch.nn.Module):
     # TODO: multiple regressor heads?
     # reference: https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html
 
-    def __init__(self, dataset):
+    def __init__(self, dataset: Data):
         super().__init__()
 
         self.conv1 = GCNConv(dataset.num_node_features, 32)
@@ -94,6 +99,9 @@ class GCN(torch.nn.Module):
         if viz_training and epoch % 50 == 0:
             print(f"epoch: {epoch}, loss: {loss}")
         self.optimizer.step()
+
+
+cache = Cache(maxsize=4)
 
 
 class TrainAndEvaluate:
@@ -172,14 +180,14 @@ class TrainAndCaptureResults:
             columns=["Embedding Size", "Learning Rate", "Weight Decay", "Training Ratio", "Dataset", "Epochs",
                      "Error Threshold", "Avg Accuracy"])
 
-    def _setup(self):
+    def _setup(self) -> List:
         combinations = [HyperParameterCombinations.ES, HyperParameterCombinations.LR, HyperParameterCombinations.WD,
                         HyperParameterCombinations.TR, HyperParameterCombinations.DATASET,
                         HyperParameterCombinations.EPOCHS,
                         HyperParameterCombinations.ET]
         return combinations
 
-    def run(self):
+    def run(self) -> pd.DataFrame:
         accuracies = []
         all_combinations = list(itertools.product(*self._setup()))
         total_combinations = len(all_combinations)
@@ -187,12 +195,12 @@ class TrainAndCaptureResults:
         for index, combination in enumerate(all_combinations):
             print(f"Running combination: {index + 1} of {total_combinations}")
             combination = list(combination)
+            data = combination[4]
+            train_and_eval = TrainAndEvaluate(data[0])
             accuracy_sum = 0.0
             Hyperparameters.override_defaults(*combination)
             for seed in self.seeds:
                 torch.manual_seed(seed)
-                data = combination[4]
-                train_and_eval = TrainAndEvaluate(data[0])
                 trained_model = train_and_eval.train_helper(False)
                 accuracy_sum += train_and_eval.evaluate(trained_model)
             avg_accuracy = round(accuracy_sum / 3, 4)
@@ -214,7 +222,7 @@ if __name__ == '__main__':
     # train_and_eval = TrainAndEvaluate(data)
     # trained_model = train_and_eval.train_helper(False)
     # print(train_and_eval.evaluate(trained_model))
-    show_dataset_stats(KarateClub())
+    show_dataset_stats(Planetoid(root="delete_me/", name="Cora"))
     # show_dataset_stats(Planetoid(root="delete_me/", name="Cora"))
     # show_dataset_stats(Planetoid(root="delete_me/", name="PubMed"))
     # show_dataset_stats(Planetoid(root="delete_me/", name="CiteSeer"))
