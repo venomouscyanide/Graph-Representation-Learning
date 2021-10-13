@@ -196,11 +196,11 @@ class TrainAndCaptureResults:
             print(f"Running combination: {index + 1} of {total_combinations}")
             combination = list(combination)
             data = combination[4]
-            train_and_eval = TrainAndEvaluate(data[0])
             accuracy_sum = 0.0
             Hyperparameters.override_defaults(*combination)
             for seed in self.seeds:
                 torch.manual_seed(seed)
+                train_and_eval = TrainAndEvaluate(data[0])
                 trained_model = train_and_eval.train_helper(False)
                 accuracy_sum += train_and_eval.evaluate(trained_model)
             avg_accuracy = round(accuracy_sum / 3, 4)
