@@ -1,10 +1,11 @@
 import time
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import torch
 from torch.nn import Linear
-from torch_geometric.datasets import KarateClub
+from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import to_networkx
 
@@ -54,11 +55,12 @@ def train(data, optimizer, model, criterion):
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, dataset):
+    def __init__(self, dataset, dim: Optional[int] = None):
         dataset = dataset
+        dim = dataset.num_features if not dim else dim
         super(GCN, self).__init__()
         torch.manual_seed(12345)
-        self.conv1 = GCNConv(dataset.num_features, 4)
+        self.conv1 = GCNConv(dim, 4)
         self.conv2 = GCNConv(4, 4)
         self.conv3 = GCNConv(4, 2)
         self.classifier = Linear(2, dataset.num_classes)
@@ -78,7 +80,7 @@ class GCN(torch.nn.Module):
 
 
 def explore_gcn():
-    dataset = KarateClub()
+    dataset = Planetoid(root="delete_me/", name="CiteSeer")
     model = GCN(dataset)
 
     data = dataset[0]
@@ -87,6 +89,16 @@ def explore_gcn():
     show_dataset_as_networkx_graph(data)
     visualize(h, color=data.y)
     train_helper(model, data)
+
+    def _accuracy():
+        with torch.no_grad():
+            model_output, h = model(data.x, data.edge_index)
+            num = int(
+                torch.count_nonzero(torch.argmax(model_output[~ data.train_mask], dim=1) == data.y[~ data.train_mask]))
+            denom = int(torch.count_nonzero(~ data.train_mask))
+            print(num / denom * 100)
+
+    _accuracy()
     print("Completed training 400 epochs")
 
 
