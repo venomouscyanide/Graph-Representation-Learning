@@ -118,7 +118,7 @@ class TrainAndEvaluate:
             model.train_helper(self.target, epoch, viz_training, self.data)
         return model
 
-    def evaluate(self, trained_model: GCN) -> float:
+    def evaluate(self, trained_model: GCN) -> torch.tensor:
         trained_model.eval()
         out_tensor = trained_model(self.data.x, self.data.edge_index)
         return self._get_accuracy(out_tensor)
@@ -145,19 +145,38 @@ class TrainAndEvaluate:
         self.data.test_mask = test_mask
         self.data.train_mask = train_mask
 
-    def _get_accuracy(self, out: torch.tensor) -> float:
+    def _get_accuracy(self, out: torch.tensor) -> torch.tensor:
         # for some reason cosine sim is giving high similarity no matter what
         # cosine_sim = torch.nn.functional.cosine_similarity(x1=out[self.data.test_mask],
         #                                                    x2=self.target[self.data.test_mask], dim=1)
         # define a custom accuracy metric
         # all the output values must be within the threshold defined in Hyperparameters.ERROR_THRESHOLD
 
-        diff_tensor = torch.abs(out[self.data.test_mask] - self.target[self.data.test_mask])
-        within_threshold = torch.le(diff_tensor, Hyperparameters.ERROR_THRESHOLD)
-        numerator = int(torch.count_nonzero(within_threshold == True))
-        denominator = diff_tensor.shape[0] * diff_tensor.shape[1]
-        accuracy = round(numerator / denominator * 100, 4)
-        return accuracy
+        ## ~~~~START OF OLD ACCURACY CODE~~~
+        # diff_tensor = torch.abs(out[self.data.test_mask] - self.target[self.data.test_mask])
+        # loss = torch.nn.MSELoss()
+        # for dim in range(Hyperparameters.EMBEDDINGS_SIZE):
+        #     expectation_for_statistic = self.target[self.data.test_mask][dim]
+        #     prediction_for_statistic = out[self.data.test_mask][dim]
+        #     with torch.no_grad():
+        #         loss(prediction_for_statistic, expectation_for_statistic)
+        # within_threshold = torch.le(diff_tensor, Hyperparameters.ERROR_THRESHOLD)
+        # numerator = int(torch.count_nonzero(within_threshold == True))
+        # denominator = diff_tensor.shape[0] * diff_tensor.shape[1]
+        # accuracy = round(numerator / denominator * 100, 4)
+        ## ~~~~END OF OLD ACCURACY CODE~~~
+
+        """
+        Calculate the MSE across each statistic(column) and return the 8-d tensor which contains the MSE across each statistic
+        """
+        loss = torch.nn.MSELoss()
+        accuracy = []
+        for dim in range(Hyperparameters.EMBEDDINGS_SIZE):
+            expectation_for_statistic = self.target[self.data.test_mask][:, dim]
+            prediction_for_statistic = out[self.data.test_mask][:, dim]
+            with torch.no_grad():
+                accuracy.append(float(loss(prediction_for_statistic, expectation_for_statistic)))
+        return torch.tensor(accuracy)
 
 
 class HyperParameterCombinations:
@@ -178,17 +197,17 @@ class TrainAndCaptureResults:
         self.seeds: List[int] = [7, 13, 666]
         self.data = pd.DataFrame(
             columns=["Embedding Size", "Learning Rate", "Weight Decay", "Training Ratio", "Dataset", "Epochs",
-                     "Error Threshold", "Avg Accuracy"])
+                     *[f'{stat}() error' for stat in Hyperparameters.ALL_STATISTICS_CAPTURED],
+                     f"Average Error across {Hyperparameters.EMBEDDINGS_SIZE}-d"])
 
     def _setup(self) -> List:
         combinations = [HyperParameterCombinations.ES, HyperParameterCombinations.LR, HyperParameterCombinations.WD,
                         HyperParameterCombinations.TR, HyperParameterCombinations.DATASET,
-                        HyperParameterCombinations.EPOCHS,
-                        HyperParameterCombinations.ET]
+                        HyperParameterCombinations.EPOCHS]
         return combinations
 
     def run(self) -> pd.DataFrame:
-        accuracies = []
+        errors = []
         all_combinations = list(itertools.product(*self._setup()))
         total_combinations = len(all_combinations)
         print(f"Total combinations to run exp on: {total_combinations}")
@@ -196,21 +215,24 @@ class TrainAndCaptureResults:
             print(f"Running combination: {index + 1} of {total_combinations}")
             combination = list(combination)
             data = combination[4]
-            accuracy_sum = 0.0
+            error_tensor_sum = torch.tensor([0.0 for _ in range(Hyperparameters.EMBEDDINGS_SIZE)])
             Hyperparameters.override_defaults(*combination)
             for seed in self.seeds:
                 torch.manual_seed(seed)
                 train_and_eval = TrainAndEvaluate(data[0])
                 trained_model = train_and_eval.train_helper(False)
-                accuracy_sum += train_and_eval.evaluate(trained_model)
-            avg_accuracy = round(accuracy_sum / 3, 4)
-            accuracies.append(avg_accuracy)
-            combination.append(avg_accuracy)
+                error_tensor_sum += train_and_eval.evaluate(trained_model)
+            avg_mse = torch.div(error_tensor_sum, 3.0)
+            avg_mse_across_8d = torch.mean(avg_mse)
+            errors.append(avg_mse_across_8d)
+            combination.extend([float(x) for x in avg_mse])
+            combination.append(float(avg_mse_across_8d))
             combination[4] = str(combination[4])
             self.data.loc[len(self.data)] = combination
-        best_accuracy = max(accuracies)
-        print(f"Best accuracy: {best_accuracy}")
-        self.data.sort_values(by="Avg Accuracy", ascending=False, inplace=True)
+        least_error = min(errors)
+        print(f"Least avg error across 8-d: {least_error}")
+        self.data.sort_values(by=f"Average Error across {Hyperparameters.EMBEDDINGS_SIZE}-d", ascending=True,
+                              inplace=True)
         return self.data
 
 
