@@ -1,5 +1,4 @@
 import itertools
-import random
 from typing import List
 
 import pandas as pd
@@ -33,7 +32,6 @@ class Hyperparameters:
     TRAINING_RATIO: float = 0.70
     DATASET: str = "KarateClub"
     EPOCHS: int = 1000
-    ERROR_THRESHOLD: torch.FloatTensor = torch.FloatTensor([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 10])
 
     @staticmethod
     def override_defaults(*args):
@@ -51,18 +49,32 @@ class CreateNodeFeatureTensor:
         if type(cache.get(dataset_id)) == torch.Tensor:
             return cache.get(dataset_id)
         nx_graph = to_networkx(data)
-        random.seed(13)
         # features captured
-        feature_functions: List[str] = random.sample(Hyperparameters.ALL_STATISTICS_CAPTURED,
-                                                     Hyperparameters.EMBEDDINGS_SIZE)
+        feature_functions: List[str] = Hyperparameters.ALL_STATISTICS_CAPTURED
+
         # ref for globals()["function_name"](): https://stackoverflow.com/a/834451
         feature_values: List[List[float]] = [
             list(globals()[feature](nx_graph).values()) for feature in feature_functions
         ]
+
+        # norm harmonic centrality as values are larger than other stats
+        self._norm_harmonic_centrality_values(feature_values, nx_graph)
+
         features = [list(node_embedding) for node_embedding in zip(*feature_values)]
         target_tensor = torch.tensor(features, dtype=torch.float)
         cache[dataset_id] = target_tensor
         return target_tensor
+
+    def _norm_harmonic_centrality_values(self, feature_values, nx_graph):
+        """
+        normalize harmonic centrality values
+        normalized harmonic centrality(node) = sum(1 / distance from node to every other node excluding itself) / (number of nodes - 1)
+        ref: https://neo4j.com/docs/graph-data-science/current/algorithms/harmonic-centrality/
+        """
+
+        normalization_val = nx_graph.number_of_nodes() - 1
+        idx_of_hc_values = Hyperparameters.ALL_STATISTICS_CAPTURED.index("harmonic_centrality")
+        feature_values[idx_of_hc_values] = [hc / normalization_val for hc in feature_values[idx_of_hc_values]]
 
 
 class GCN(torch.nn.Module):
