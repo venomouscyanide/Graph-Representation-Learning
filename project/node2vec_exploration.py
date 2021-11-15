@@ -1,27 +1,24 @@
-# source: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
+# ref: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
 import os.path as osp
 
 import torch
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
+
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import Node2Vec
+
+from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 
 
 class DeepWalk(Node2Vec):
     # Deep walk is nothing but node2vec when p and q are 1
     def __init__(self, **kwargs):
+        # override p and q to 1 as dw is just a special case of node2vec
         kwargs['p'] = 1
         kwargs['q'] = 1
         super().__init__(**kwargs)
 
 
-def train_node2vec():
-    dataset = 'Cora'
-    path = osp.join('temp_data', dataset)
-    dataset = Planetoid(path, dataset)
-    data = dataset[0]
-
+def train_node2vec(data):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = Node2Vec(data.edge_index, embedding_dim=128, walk_length=20,
                      context_size=10, walks_per_node=10,
@@ -51,30 +48,31 @@ def train_node2vec():
                          max_iter=150)
         return acc
 
-    for epoch in range(1, 101):
+    for epoch in range(1, 15):
         loss = train()
         acc = test()
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
 
-    @torch.no_grad()
-    def plot_points(colors):
-        model.eval()
-        z = model(torch.arange(data.num_nodes, device=device))
-        z = TSNE(n_components=2).fit_transform(z.cpu().numpy())
-        y = data.y.cpu().numpy()
+    # plot_points(colors)
+    return model
 
-        plt.figure(figsize=(8, 8))
-        for i in range(dataset.num_classes):
-            plt.scatter(z[y == i, 0], z[y == i, 1], s=20, color=colors[i])
-        plt.axis('off')
-        plt.show()
 
-    colors = [
-        '#ffc0cb', '#bada55', '#008080', '#420420', '#7fe5f0', '#065535',
-        '#ffd700'
-    ]
-    plot_points(colors)
+def node_classification_prediction(model, data):
+    model = model()
+    clf = LogisticRegression(). \
+        fit(
+        model[data.train_mask].detach().cpu().numpy(),
+        data.y[data.train_mask].detach().cpu().numpy()
+    )
+    return clf.score(model[data.test_mask].detach().cpu().numpy(),
+                     data.y[data.test_mask].detach().cpu().numpy())
 
 
 if __name__ == "__main__":
-    train_node2vec()
+    dataset = 'Cora'
+    path = osp.join('temp_data', dataset)
+    dataset = Planetoid(path, dataset)
+    data = dataset[0]
+
+    node2vec_model = train_node2vec(data)
+    print(f"Node classification score: f{node_classification_prediction(node2vec_model, data)}")
