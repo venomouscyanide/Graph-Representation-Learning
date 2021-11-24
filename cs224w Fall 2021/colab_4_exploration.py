@@ -166,11 +166,10 @@ class GAT(MessagePassing):
         #    sorted inputs in CSR representation. You can simply pass it to softmax.
         # Our implementation is ~4-5 lines, but don't worry if you deviate from this.
         leaky_relu = torch.nn.LeakyReLU(negative_slope=self.negative_slope)
-        alpha_i_j = torch_geometric.utils.softmax(src=leaky_relu(alpha_i + alpha_j), index=index)
+        alpha_i_j = torch_geometric.utils.softmax(src=leaky_relu(alpha_i + alpha_j), index=index, ptr=ptr)
         dropout = nn.Dropout(p=self.dropout)
         alpha_i_j = dropout(alpha_i_j)
         out = alpha_i_j * x_j
-        # not implemented CSR if ptr is given
         ############################################################################
 
         return out
