@@ -100,9 +100,9 @@ if __name__ == "__main__":
 
     transform = T.Compose([
         T.NormalizeFeatures(),
-        T.ToDevice(device),
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                           add_negative_train_samples=True, split_labels=False),
+        T.ToDevice(device)
     ])
     print(f"Using device: {device}")
     dataset = Planetoid(path, name='Cora', transform=transform)
