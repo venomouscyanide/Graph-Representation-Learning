@@ -104,11 +104,12 @@ if __name__ == "__main__":
         T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
                           add_negative_train_samples=True, split_labels=False),
     ])
+    print(f"Using device: {device}")
     dataset = Planetoid(path, name='Cora', transform=transform)
     train_data, val_data, test_data = dataset[0]
 
     node2vec_model = train_node2vec(train_data)
-    print(f"Using device: {device}")
+
     print(f"Node classification score: {node_classification_prediction(node2vec_model, test_data)}")
 
     print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data)}")
