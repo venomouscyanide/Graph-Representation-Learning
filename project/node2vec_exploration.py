@@ -27,7 +27,6 @@ class DeepWalk(Node2Vec):
 
 
 def train_node2vec(data):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = Node2Vec(data.edge_index, embedding_dim=128, walk_length=20,
                      context_size=10, walks_per_node=10,
                      num_negative_samples=1, p=1, q=1, sparse=True).to(device)
@@ -109,6 +108,7 @@ if __name__ == "__main__":
     train_data, val_data, test_data = dataset[0]
 
     node2vec_model = train_node2vec(train_data)
+    print(f"Using device: {device}")
     print(f"Node classification score: {node_classification_prediction(node2vec_model, test_data)}")
 
     print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data)}")
