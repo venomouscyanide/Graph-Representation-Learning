@@ -2,11 +2,17 @@
 import os.path as osp
 
 import torch
+from sklearn.metrics import roc_auc_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import Node2Vec
+import torch_geometric.transforms as T
 
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class DeepWalk(Node2Vec):
@@ -24,7 +30,7 @@ def train_node2vec(data):
                      context_size=10, walks_per_node=10,
                      num_negative_samples=1, p=1, q=1, sparse=True).to(device)
 
-    loader = model.loader(batch_size=128, shuffle=True, num_workers=4)
+    loader = model.loader(batch_size=128, shuffle=True, num_workers=1)
     optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
 
     def train():
@@ -68,6 +74,34 @@ def node_classification_prediction(model, data):
                      data.y[data.test_mask].detach().cpu().numpy())
 
 
+def link_prediction(model, data):
+    model = model()
+
+    transform = T.Compose([
+        T.NormalizeFeatures(),
+        T.ToDevice(device),
+        T.RandomLinkSplit(num_val=0.05, num_test=0.1, is_undirected=True,
+                          add_negative_train_samples=True, split_labels=False),
+    ])
+    dataset = Planetoid(path, name='Cora', transform=transform)
+    train_data, val_data, test_data = dataset[0]
+
+    lr_clf = LogisticRegressionCV(Cs=10, cv=10, scoring="roc_auc", max_iter=1500)
+    link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
+
+    link_features = torch.sum(model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]], dim=-1)
+    link_features_train_128 = model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]]
+    link_features_test_128 = model[test_data.edge_label_index[0]] * model[test_data.edge_label_index[1]]
+
+    link_pred_pipeline.fit(link_features_train_128.detach().cpu().numpy(), train_data.edge_label.detach().cpu().numpy())
+    final_prediction = link_pred_pipeline.predict_proba(link_features_test_128.detach().cpu().numpy())
+
+    positive_column = list(link_pred_pipeline.classes_).index(1)
+    roc_scores = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), final_prediction[:, positive_column])
+    print(roc_scores)
+    print(link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy()))
+
+
 if __name__ == "__main__":
     dataset = 'Cora'
     path = osp.join('temp_data', dataset)
@@ -76,3 +110,4 @@ if __name__ == "__main__":
 
     node2vec_model = train_node2vec(data)
     print(f"Node classification score: f{node_classification_prediction(node2vec_model, data)}")
+    print(f"Link prediction score: f{link_prediction(node2vec_model, data)}")
