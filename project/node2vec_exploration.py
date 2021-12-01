@@ -11,7 +11,9 @@ from torch_geometric.nn import Node2Vec
 import torch_geometric.transforms as T
 
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
+import warnings
 
+warnings.simplefilter(action="ignore")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -74,8 +76,28 @@ def node_classification_prediction(model, data):
                      data.y[data.test_mask].detach().cpu().numpy())
 
 
-def link_prediction(model, data):
+def link_prediction(model, train_data, test_data):
     model = model()
+
+    lr_clf = LogisticRegressionCV(Cs=10, cv=10, scoring="roc_auc", max_iter=1500)
+    link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
+
+    link_features_train_128 = model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]]
+    link_features_test_128 = model[test_data.edge_label_index[0]] * model[test_data.edge_label_index[1]]
+
+    link_pred_pipeline.fit(link_features_train_128.detach().cpu().numpy(), train_data.edge_label.detach().cpu().numpy())
+    final_prediction = link_pred_pipeline.predict_proba(link_features_test_128.detach().cpu().numpy())
+
+    positive_column = list(link_pred_pipeline.classes_).index(1)
+    roc_scores = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), final_prediction[:, positive_column])
+    # print(roc_scores)
+    # print(link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy(), test_data.edge_label))
+    return roc_scores
+
+
+if __name__ == "__main__":
+    dataset = 'Cora'
+    path = osp.join('temp_data', dataset)
 
     transform = T.Compose([
         T.NormalizeFeatures(),
@@ -86,29 +108,9 @@ def link_prediction(model, data):
     dataset = Planetoid(path, name='Cora', transform=transform)
     train_data, val_data, test_data = dataset[0]
 
-    lr_clf = LogisticRegressionCV(Cs=10, cv=10, scoring="roc_auc", max_iter=1500)
-    link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
+    node2vec_model = train_node2vec(train_data)
+    print(f"Node classification score: {node_classification_prediction(node2vec_model, test_data)}")
 
-    link_features_1d = torch.sum(model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]], dim=-1)
-    link_features_train_128 = model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]]
-    link_features_test_128 = model[test_data.edge_label_index[0]] * model[test_data.edge_label_index[1]]
-
-    link_pred_pipeline.fit(link_features_train_128.detach().cpu().numpy(), train_data.edge_label.detach().cpu().numpy())
-    final_prediction = link_pred_pipeline.predict_proba(link_features_test_128.detach().cpu().numpy())
-
-    positive_column = list(link_pred_pipeline.classes_).index(1)
-    roc_scores = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), final_prediction[:, positive_column])
-    print(roc_scores)
-    print(link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy(), test_data.edge_label))
-    return roc_scores
-
-
-if __name__ == "__main__":
-    dataset = 'Cora'
-    path = osp.join('temp_data', dataset)
-    dataset = Planetoid(path, dataset)
-    data = dataset[0]
-
-    node2vec_model = train_node2vec(data)
-    print(f"Node classification score: f{node_classification_prediction(node2vec_model, data)}")
-    print(f"Link prediction score: {link_prediction(node2vec_model, data)}")
+    print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data)}")
+    print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data)}")
+    print(f"Link prediction score on val: {link_prediction(node2vec_model, train_data, val_data)}")
