@@ -89,7 +89,7 @@ def link_prediction(model, data):
     lr_clf = LogisticRegressionCV(Cs=10, cv=10, scoring="roc_auc", max_iter=1500)
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
 
-    link_features = torch.sum(model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]], dim=-1)
+    link_features_1d = torch.sum(model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]], dim=-1)
     link_features_train_128 = model[train_data.edge_label_index[0]] * model[train_data.edge_label_index[1]]
     link_features_test_128 = model[test_data.edge_label_index[0]] * model[test_data.edge_label_index[1]]
 
@@ -99,7 +99,8 @@ def link_prediction(model, data):
     positive_column = list(link_pred_pipeline.classes_).index(1)
     roc_scores = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), final_prediction[:, positive_column])
     print(roc_scores)
-    print(link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy()))
+    print(link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy(), test_data.edge_label))
+    return roc_scores
 
 
 if __name__ == "__main__":
@@ -110,4 +111,4 @@ if __name__ == "__main__":
 
     node2vec_model = train_node2vec(data)
     print(f"Node classification score: f{node_classification_prediction(node2vec_model, data)}")
-    print(f"Link prediction score: f{link_prediction(node2vec_model, data)}")
+    print(f"Link prediction score: {link_prediction(node2vec_model, data)}")
