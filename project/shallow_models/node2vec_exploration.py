@@ -33,26 +33,38 @@ warnings.simplefilter(action="ignore")
 
 class TrainNode2Vec:
     @staticmethod
-    def train_node2vec(config: Dict, test_data, validation_data, cpu_count: int):
+    def train_node2vec(config: Dict, cpu_count: int, data_dir: str):
+        device = 'cpu'
+        train_data, val_data, test_data = DataLoader().load_data("Cora", data_dir, device)
         model = Node2Vec(test_data.edge_index, embedding_dim=config['embedding_dim'], walk_length=config['walk_length'],
                          context_size=config['context_size'], walks_per_node=config['walks_per_node'],
                          num_negative_samples=1, p=config['p'], q=config['q'], sparse=True)
-        loader = model.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
         optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=config['lr'])
 
-        device = 'cpu'
         if torch.cuda.is_available():
             device = "cuda:0"
             if gpu_count > 1:
                 model = nn.DataParallel(model)
         model.to(device)
 
+        train_data = train_data.to(device)
+        validation_data = val_data.to(device)
+        test_data = test_data.to(device)
+
+        if torch.cuda.is_available():
+            loader = model.module.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
+        else:
+            loader = model.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
+
         def _train():
             model.train()
             total_loss = 0
             for pos_rw, neg_rw in loader:
                 optimizer.zero_grad()
-                loss = model.loss(pos_rw.to(device), neg_rw.to(device))
+                if torch.cuda.is_available():
+                    loss = model.module.loss(pos_rw.to(device), neg_rw.to(device))
+                else:
+                    loss = model.loss(pos_rw.to(device), neg_rw.to(device))
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
@@ -69,7 +81,7 @@ class TrainNode2Vec:
             loss = _train()
             acc = _test()
             print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
-        tune.report(loss=loss, accuracy=acc)
+            tune.report(loss=loss, accuracy=acc)
         return model
 
 
@@ -102,7 +114,7 @@ def link_prediction(model, train_data, test_data):
 
 
 class HyperParameterTuning:
-    CONFIG = config = {
+    CONFIG = {
         "lr": tune.loguniform(1e-4, 1e-1),
         "batch_size": tune.choice([int(math.pow(2, n)) for n in range(1, 10)]),
         "context_size": tune.choice([5, 10]),
@@ -111,6 +123,11 @@ class HyperParameterTuning:
         "walks_per_node": tune.choice([10, 20]),
         "p": tune.choice([0.25 * n for n in range(16)]),
         "q": tune.choice([0.25 * n for n in range(16)]),
+    }
+
+    RAYTUNE_CONFIG = {
+        'num_samples': 25,
+        'max_epochs': 150
     }
 
 
@@ -128,23 +145,19 @@ class DataLoader:
 
 
 class Tuner:
-    def tune(self, data_dir, device, cpu_count, gpu_count):
-        max_epochs = 100
-        num_samples = 100
-        train_data, val_data, test_data = DataLoader().load_data("Cora", data_dir, device)
-
+    def tune(self, data_dir, cpu_count, gpu_count):
         scheduler = ASHAScheduler(
             metric="loss",
             mode="min",
-            max_t=max_epochs,
+            max_t=HyperParameterTuning.RAYTUNE_CONFIG['max_epochs'],
             grace_period=1,
             reduction_factor=2)
         reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
         result = tune.run(
-            partial(TrainNode2Vec().train_node2vec, test_data=test_data, validation_data=val_data, cpu_count=cpu_count),
+            tune.with_parameters(TrainNode2Vec().train_node2vec, cpu_count=cpu_count, data_dir=data_dir),
             resources_per_trial={"cpu": cpu_count, "gpu": gpu_count},
             config=HyperParameterTuning.CONFIG,
-            num_samples=num_samples,
+            num_samples=HyperParameterTuning.RAYTUNE_CONFIG['num_samples'],
             scheduler=scheduler,
             progress_reporter=reporter,
             log_to_file=True)
@@ -154,13 +167,17 @@ class Tuner:
         print("Best trial final train loss: {}".format(best_trial.last_result["loss"]))
         print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        train_data, val_data, test_data = DataLoader().load_data("Cora", data_dir, device)
+        train_data = train_data.to(device)
+        val_data = val_data.to(device)
+        test_data = test_data.to(device)
         best_trained_model = Node2Vec(test_data.edge_index, embedding_dim=best_trial.config['embedding_dim'],
                                       walk_length=best_trial.config['walk_length'],
                                       context_size=best_trial.config['context_size'],
                                       walks_per_node=best_trial.config['walks_per_node'],
                                       num_negative_samples=1, p=best_trial.config['p'], q=best_trial.config['q'],
                                       sparse=True)
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         best_trained_model.to(device)
 
         best_checkpoint_dir = best_trial.checkpoint.value
@@ -169,26 +186,26 @@ class Tuner:
 
         test_acc = link_prediction(best_trained_model, train_data, val_data)
         print("Best trial test set accuracy: {}".format(test_acc))
+        torch.save(best_trained_model, 'node2vec_best_model.model')
         return best_trained_model
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Tuning for n2v", )
+    parser = argparse.ArgumentParser(description="Run Tuning for n2v/dw", )
     parser.add_argument('--gpu_count', help='Set available GPUs to tune on', required=True, type=int)
+    parser.add_argument('--cpu_count', help='Set available CPUs to tune on', required=True, type=int)
     args = parser.parse_args()
 
     dataset = 'Cora'
     path = osp.join('../temp_data', dataset)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-
     cpu_count = int(multiprocessing.cpu_count() / 2)
     gpu_count = args.gpu_count
 
-    node2vec_model = Tuner().tune(path, device, cpu_count, gpu_count)
+    node2vec_model = Tuner().tune(path, cpu_count, gpu_count)
 
-    train_data, test_data, val_data = DataLoader().load_data("Cora", path, device)
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    train_data, test_data, val_data = DataLoader().load_data("Cora", path, 'cpu')
     print(f"Node classification score: {node_classification_prediction(node2vec_model, test_data)}")
     print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data)}")
     print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data)}")
