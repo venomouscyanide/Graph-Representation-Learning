@@ -1,11 +1,16 @@
 # ref: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
 # ray tune: https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
+"""
+    Usage : python3.9 node2vec_exploration.py --gpu_count 0
+
+"""
 import math
 import os
 import os.path as osp
 from functools import partial
 from typing import Dict
 
+import argparse
 import torch
 from ray import tune
 from ray.tune import CLIReporter
@@ -164,6 +169,10 @@ class Tuner:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run Tuning for n2v", )
+    parser.add_argument('--gpu_count', help='Set available GPUs to tune on', required=True, type=int)
+    args = parser.parse_args()
+
     dataset = 'Cora'
     path = osp.join('../temp_data', dataset)
 
@@ -171,7 +180,7 @@ if __name__ == "__main__":
     print(f"Using device: {device}")
 
     cpu_count = int(multiprocessing.cpu_count() / 2)
-    gpu_count = 0
+    gpu_count = args.gpu_count
 
     node2vec_model = Tuner().tune(path, device, cpu_count, gpu_count)
 
