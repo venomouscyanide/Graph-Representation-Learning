@@ -36,9 +36,16 @@ class TrainNode2Vec:
     def train_node2vec(config: Dict, test_data, validation_data, cpu_count: int):
         model = Node2Vec(test_data.edge_index, embedding_dim=config['embedding_dim'], walk_length=config['walk_length'],
                          context_size=config['context_size'], walks_per_node=config['walks_per_node'],
-                         num_negative_samples=1, p=config['p'], q=config['q'], sparse=True).to(device)
+                         num_negative_samples=1, p=config['p'], q=config['q'], sparse=True)
         loader = model.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
         optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=config['lr'])
+
+        device = 'cpu'
+        if torch.cuda.is_available():
+            device = "cuda:0"
+            if gpu_count > 1:
+                model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+        model.to(device)
 
         def _train():
             model.train()
@@ -122,8 +129,8 @@ class DataLoader:
 
 class Tuner:
     def tune(self, data_dir, device, cpu_count, gpu_count):
-        max_epochs = 1000
-        num_samples = 10
+        max_epochs = 100
+        num_samples = 100
         train_data, val_data, test_data = DataLoader().load_data("Cora", data_dir, device)
 
         scheduler = ASHAScheduler(
@@ -139,7 +146,8 @@ class Tuner:
             config=HyperParameterTuning.CONFIG,
             num_samples=num_samples,
             scheduler=scheduler,
-            progress_reporter=reporter)
+            progress_reporter=reporter,
+            log_to_file=True)
 
         best_trial = result.get_best_trial("accuracy", "min", "last")
         print("Best trial config: {}".format(best_trial.config))
@@ -152,11 +160,7 @@ class Tuner:
                                       walks_per_node=best_trial.config['walks_per_node'],
                                       num_negative_samples=1, p=best_trial.config['p'], q=best_trial.config['q'],
                                       sparse=True)
-        device = "cpu"
-        if torch.cuda.is_available():
-            device = "cuda:0"
-            if gpu_count > 1:
-                best_trained_model = nn.DataParallel(best_trained_model)
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         best_trained_model.to(device)
 
         best_checkpoint_dir = best_trial.checkpoint.value
