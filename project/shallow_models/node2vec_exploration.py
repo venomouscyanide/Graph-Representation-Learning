@@ -97,7 +97,7 @@ def link_prediction(model, train_data, test_data):
 class HyperParameterTuning:
     CONFIG = config = {
         "lr": tune.loguniform(1e-4, 1e-1),
-        "batch_size": tune.choice([int(math.pow(n, 2)) for n in range(1, 10)]),
+        "batch_size": tune.choice([int(math.pow(2, n)) for n in range(1, 10)]),
         "context_size": tune.choice([5, 10]),
         "embedding_dim": tune.choice([64, 128, 256]),
         "walk_length": tune.choice([10, 15, 20]),
