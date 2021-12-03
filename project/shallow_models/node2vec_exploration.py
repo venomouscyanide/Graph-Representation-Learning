@@ -44,7 +44,7 @@ class TrainNode2Vec:
         if torch.cuda.is_available():
             device = "cuda:0"
             if gpu_count > 1:
-                model = nn.DataParallel(model, device_ids=[0, 1, 2, 3])
+                model = nn.DataParallel(model)
         model.to(device)
 
         def _train():
