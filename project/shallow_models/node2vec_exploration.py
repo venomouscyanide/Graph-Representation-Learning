@@ -34,7 +34,7 @@ warnings.simplefilter(action="ignore")
 class TrainNode2Vec:
     @staticmethod
     def train_node2vec(config: Dict, cpu_count: int, data_dir: str):
-        device = 'cpu'
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         train_data, val_data, test_data = DataLoader().load_data("Cora", data_dir, device)
         model = Node2Vec(test_data.edge_index, embedding_dim=config['embedding_dim'], walk_length=config['walk_length'],
                          context_size=config['context_size'], walks_per_node=config['walks_per_node'],
@@ -126,7 +126,7 @@ class HyperParameterTuning:
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 25,
+        'num_samples': 10,
         'max_epochs': 150
     }
 
