@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import Node2Vec
 import torch_geometric.transforms as T
+import multiprocessing
 
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 import warnings
@@ -30,8 +31,8 @@ def train_node2vec(data):
     model = Node2Vec(data.edge_index, embedding_dim=128, walk_length=20,
                      context_size=10, walks_per_node=10,
                      num_negative_samples=1, p=1, q=1, sparse=True).to(device)
-
-    loader = model.loader(batch_size=128, shuffle=True, num_workers=1)
+    num_workers = int(multiprocessing.cpu_count() / 2)
+    loader = model.loader(batch_size=128, shuffle=True, num_workers=num_workers)
     optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
 
     def train():
