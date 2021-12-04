@@ -6,7 +6,7 @@ from ray import tune
 from torch import nn
 from torch_geometric.nn import Node2Vec
 
-from project.shallow_models.utils import link_prediction
+from project.shallow_models.utils import link_prediction_cv
 
 
 class TrainNode2Vec:
@@ -57,7 +57,7 @@ class TrainNode2Vec:
         @torch.no_grad()
         def _test():
             model.eval()
-            roc_score = link_prediction(model, train_data, validation_data, operator)
+            roc_score = link_prediction_cv(model, train_data, validation_data, operator)
             return roc_score
 
         loss = acc = 0

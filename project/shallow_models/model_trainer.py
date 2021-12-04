@@ -30,7 +30,7 @@ import warnings
 
 from project.dataset_loader_factory import DatasetLoaderFactory
 from project.shallow_models.model_factory import ModelFactory, ModelTrainFactory
-from project.shallow_models.utils import link_prediction, node_classification_prediction, LinkOperators
+from project.shallow_models.utils import link_prediction_cv, node_classification_prediction, LinkOperators
 
 warnings.simplefilter(action="ignore")
 
@@ -51,8 +51,8 @@ class HyperParameterTuning:
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 1,
-        'max_epochs': 2
+        'num_samples': 50,
+        'max_epochs': 100
     }
 
     DATASET_SPLIT_CONFIG = {
@@ -137,7 +137,7 @@ class Tuner:
         best_trained_model.load_state_dict(model_state)
 
         best_op = best_trial.config['link_prediction_op']
-        validation_acc = link_prediction(best_trained_model, train_data, val_data, best_op)
+        validation_acc = link_prediction_cv(best_trained_model, train_data, val_data, best_op)
         print("Best trial val set accuracy: {}".format(validation_acc))
         torch.save(best_trained_model, os.path.join(identifier, f'{identifier}_best_model.model'))
         return best_trained_model, best_op
@@ -169,6 +169,6 @@ if __name__ == "__main__":
                                            train_data, val_data, test_data)
 
     print(f"Node classification score on test split: {node_classification_prediction(node2vec_model, test_data)}")
-    print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data, best_op)}")
-    print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data, best_op)}")
-    print(f"Link prediction score on val: {link_prediction(node2vec_model, train_data, val_data, best_op)}")
+    print(f"Link prediction score on train: {link_prediction_cv(node2vec_model, train_data, train_data, best_op)}")
+    print(f"Link prediction score on test: {link_prediction_cv(node2vec_model, train_data, test_data, best_op)}")
+    print(f"Link prediction score on val: {link_prediction_cv(node2vec_model, train_data, val_data, best_op)}")
