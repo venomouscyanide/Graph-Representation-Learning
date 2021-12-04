@@ -112,7 +112,7 @@ class Tuner:
         print("Best trial final train loss: {}".format(best_trial.last_result["loss"]))
         print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
         train_data, val_data, test_data = DataLoader().load_data(dataset, data_dir, device)
         train_data = train_data.to(device)
         val_data = val_data.to(device)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     HyperParameterTuning.NORMALIZE_FEATURES = args.norm_features
 
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
     train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device)
     node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
                                            train_data, val_data, test_data)

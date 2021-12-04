@@ -12,7 +12,7 @@ from project.shallow_models.utils import link_prediction
 class TrainNode2Vec:
     @staticmethod
     def train_node2vec(config: Dict, gpu_count: int, cpu_count: int, train_data, val_data, test_data, verbose=False):
-        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
         model = Node2Vec(train_data.edge_index, embedding_dim=config['embedding_dim'],
                          walk_length=config['walk_length'],
                          context_size=config['context_size'], walks_per_node=config['walks_per_node'],
@@ -20,7 +20,7 @@ class TrainNode2Vec:
         optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=config['lr'])
 
         operator = config['link_prediction_op']
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and gpu_count:
             model = nn.DataParallel(model)
         model.to(device)
 
@@ -28,7 +28,7 @@ class TrainNode2Vec:
         validation_data = val_data.to(device)
         test_data = test_data.to(device)
 
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and gpu_count:
             loader = model.module.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
         else:
             loader = model.loader(batch_size=config['batch_size'], shuffle=True, num_workers=cpu_count)
@@ -38,7 +38,7 @@ class TrainNode2Vec:
             total_loss = 0
             for pos_rw, neg_rw in loader:
                 optimizer.zero_grad()
-                if torch.cuda.is_available():
+                if torch.cuda.is_available() and gpu_count:
                     loss = model.module.loss(pos_rw.to(device), neg_rw.to(device))
                 else:
                     loss = model.loss(pos_rw.to(device), neg_rw.to(device))
