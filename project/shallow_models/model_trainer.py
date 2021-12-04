@@ -51,8 +51,8 @@ class HyperParameterTuning:
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 50,
-        'max_epochs': 50
+        'num_samples': 1,
+        'max_epochs': 2
     }
 
     DATASET_SPLIT_CONFIG = {
@@ -130,6 +130,10 @@ class Tuner:
 
         best_checkpoint_dir = best_trial.checkpoint.value
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
+
+        if (torch.cuda.is_available() and gpu_count):
+            model_state['embedding.weight'] = model_state.pop('module.embedding.weight')
+
         best_trained_model.load_state_dict(model_state)
 
         best_op = best_trial.config['link_prediction_op']
