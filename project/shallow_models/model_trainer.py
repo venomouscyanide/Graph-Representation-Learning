@@ -45,14 +45,14 @@ class HyperParameterTuning:
         "walks_per_node": tune.choice([10, 20]),
         "p": tune.choice([0.25 * n for n in range(16)]),
         "q": tune.choice([0.25 * n for n in range(16)]),
-        "link_prediction_op": tune.grid_search(
+        "link_prediction_op": tune.choice(
             [LinkOperators.hadamard, LinkOperators.average_u_v, LinkOperators.l1_dist, LinkOperators.l2_distance]
         )
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 150,
-        'max_epochs': 150
+        'num_samples': 50,
+        'max_epochs': 50
     }
 
     DATASET_SPLIT_CONFIG = {
@@ -106,7 +106,7 @@ class Tuner:
             progress_reporter=reporter,
             local_dir=os.path.join(identifier, "ray_results"),
             log_to_file=True,
-            resume=True
+            resume="AUTO"
         )
 
         best_trial = result.get_best_trial("accuracy", "max", "last")
