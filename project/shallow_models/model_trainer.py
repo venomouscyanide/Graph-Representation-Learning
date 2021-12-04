@@ -51,8 +51,8 @@ class HyperParameterTuning:
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 4,
-        'max_epochs': 2
+        'num_samples': 150,
+        'max_epochs': 150
     }
 
     DATASET_SPLIT_CONFIG = {
