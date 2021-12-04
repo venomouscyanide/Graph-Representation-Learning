@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from sklearn.metrics import roc_auc_score

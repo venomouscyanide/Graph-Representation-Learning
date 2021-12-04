@@ -11,7 +11,8 @@ from project.shallow_models.utils import link_prediction
 
 class TrainNode2Vec:
     @staticmethod
-    def train_node2vec(config: Dict, gpu_count: int, cpu_count: int, train_data, val_data, test_data, verbose=False):
+    def train_node2vec(config: Dict, gpu_count: int, cpu_count: int, train_data, val_data, test_data,
+                       checkpoint_dir=None, verbose=False):
         device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
         model = Node2Vec(train_data.edge_index, embedding_dim=config['embedding_dim'],
                          walk_length=config['walk_length'],
@@ -23,6 +24,12 @@ class TrainNode2Vec:
         if torch.cuda.is_available() and gpu_count:
             model = nn.DataParallel(model)
         model.to(device)
+
+        if checkpoint_dir:
+            checkpoint = os.path.join(checkpoint_dir, "checkpoint")
+            model_state, optimizer_state = torch.load(checkpoint)
+            model.load_state_dict(model_state)
+            optimizer.load_state_dict(optimizer_state)
 
         train_data = train_data.to(device)
         validation_data = val_data.to(device)

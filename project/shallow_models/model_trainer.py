@@ -105,7 +105,9 @@ class Tuner:
             scheduler=scheduler,
             progress_reporter=reporter,
             local_dir=os.path.join(identifier, "ray_results"),
-            log_to_file=True)
+            log_to_file=True,
+            resume=True
+        )
 
         best_trial = result.get_best_trial("accuracy", "max", "last")
         print("Best trial config: {}".format(best_trial.config))
@@ -149,8 +151,8 @@ if __name__ == "__main__":
 
     path = osp.join('temp_data', args.dataset)
 
-    if os.path.exists(args.identifier) and os.path.isdir(args.identifier):
-        shutil.rmtree(args.identifier)
+    # if os.path.exists(args.identifier) and os.path.isdir(args.identifier):
+    #     shutil.rmtree(args.identifier)
 
     cpu_count = args.cpu_count
     gpu_count = args.gpu_count
