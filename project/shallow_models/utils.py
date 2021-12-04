@@ -28,7 +28,7 @@ def link_prediction(model, train_data, test_data, operator):
     # test_data can be test/validation test. The name is rather deceiving.
     model = model()
 
-    lr_clf = LogisticRegressionCV(Cs=10, cv=10, scoring="roc_auc", max_iter=1500)
+    lr_clf = LogisticRegression(max_iter=1500)
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
 
     link_features_train_128 = operator(model[train_data.edge_label_index[0]], model[train_data.edge_label_index[1]])
