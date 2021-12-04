@@ -43,8 +43,8 @@ class HyperParameterTuning:
         "embedding_dim": tune.choice([64, 128, 256]),
         "walk_length": tune.choice([10, 15, 20]),
         "walks_per_node": tune.choice([10, 20]),
-        "p": tune.choice([0.25 * n for n in range(16)]),
-        "q": tune.choice([0.25 * n for n in range(16)]),
+        "p": tune.choice([1 * n for n in range(1, 5)]),
+        "q": tune.choice([1 * n for n in range(1, 5)]),
         "link_prediction_op": tune.choice(
             [LinkOperators.hadamard, LinkOperators.average_u_v, LinkOperators.l1_dist, LinkOperators.l2_distance]
         )
