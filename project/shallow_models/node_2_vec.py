@@ -19,6 +19,7 @@ class TrainNode2Vec:
                          num_negative_samples=1, p=config['p'], q=config['q'], sparse=True)
         optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=config['lr'])
 
+        operator = config['link_prediction_op']
         if torch.cuda.is_available():
             device = "cuda:0"
             if gpu_count > 1:
@@ -51,7 +52,7 @@ class TrainNode2Vec:
         @torch.no_grad()
         def _test():
             model.eval()
-            roc_score = link_prediction(model, train_data, validation_data)
+            roc_score = link_prediction(model, train_data, validation_data, operator)
             return roc_score
 
         loss = acc = 0

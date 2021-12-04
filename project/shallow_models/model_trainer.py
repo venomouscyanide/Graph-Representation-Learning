@@ -30,7 +30,7 @@ import warnings
 
 from project.dataset_loader_factory import DatasetLoaderFactory
 from project.shallow_models.model_factory import ModelFactory, ModelTrainFactory
-from project.shallow_models.utils import link_prediction, node_classification_prediction
+from project.shallow_models.utils import link_prediction, node_classification_prediction, LinkOperators
 
 warnings.simplefilter(action="ignore")
 
@@ -45,12 +45,14 @@ class HyperParameterTuning:
         "walks_per_node": tune.choice([10, 20]),
         "p": tune.choice([0.25 * n for n in range(16)]),
         "q": tune.choice([0.25 * n for n in range(16)]),
-        "link_prediction_op": tune.grid_search([])
+        "link_prediction_op": tune.grid_search(
+            [LinkOperators.hadamard, LinkOperators.average_u_v, LinkOperators.l1_dist, LinkOperators.l2_distance]
+        )
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 50,
-        'max_epochs': 150
+        'num_samples': 4,
+        'max_epochs': 2
     }
 
     DATASET_SPLIT_CONFIG = {
@@ -128,10 +130,11 @@ class Tuner:
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
         best_trained_model.load_state_dict(model_state)
 
-        validation_acc = link_prediction(best_trained_model, train_data, val_data)
+        best_op = best_trial.config['link_prediction_op']
+        validation_acc = link_prediction(best_trained_model, train_data, val_data, best_op)
         print("Best trial val set accuracy: {}".format(validation_acc))
         torch.save(best_trained_model, os.path.join(identifier, f'{identifier}_best_model.model'))
-        return best_trained_model
+        return best_trained_model, best_op
 
 
 if __name__ == "__main__":
@@ -156,10 +159,10 @@ if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device)
-    node2vec_model = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
-                                  train_data, val_data, test_data)
+    node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
+                                           train_data, val_data, test_data)
 
     print(f"Node classification score on test split: {node_classification_prediction(node2vec_model, test_data)}")
-    print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data)}")
-    print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data)}")
-    print(f"Link prediction score on val: {link_prediction(node2vec_model, train_data, val_data)}")
+    print(f"Link prediction score on train: {link_prediction(node2vec_model, train_data, train_data, best_op)}")
+    print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data, best_op)}")
+    print(f"Link prediction score on val: {link_prediction(node2vec_model, train_data, val_data, best_op)}")
