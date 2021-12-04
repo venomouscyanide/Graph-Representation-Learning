@@ -17,7 +17,6 @@ import os
 import os.path as osp
 
 import argparse
-import shutil
 
 import torch
 from ray import tune
@@ -131,7 +130,7 @@ class Tuner:
         best_checkpoint_dir = best_trial.checkpoint.value
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
 
-        if (torch.cuda.is_available() and gpu_count):
+        if torch.cuda.is_available() and gpu_count:
             model_state['embedding.weight'] = model_state.pop('module.embedding.weight')
 
         best_trained_model.load_state_dict(model_state)
