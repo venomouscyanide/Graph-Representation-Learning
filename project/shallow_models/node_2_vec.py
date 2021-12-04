@@ -21,9 +21,7 @@ class TrainNode2Vec:
 
         operator = config['link_prediction_op']
         if torch.cuda.is_available():
-            device = "cuda:0"
-            if gpu_count > 1:
-                model = nn.DataParallel(model)
+            model = nn.DataParallel(model)
         model.to(device)
 
         train_data = train_data.to(device)
