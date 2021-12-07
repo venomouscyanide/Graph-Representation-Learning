@@ -114,10 +114,11 @@ class Tuner:
         print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 
         device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
-        train_data, val_data, test_data = DataLoader().load_data(dataset, data_dir, device)
+
         train_data = train_data.to(device)
         val_data = val_data.to(device)
         test_data = test_data.to(device)
+
         model = ModelFactory().get(model_name)
         best_trained_model = model(train_data.edge_index, embedding_dim=best_trial.config['embedding_dim'],
                                    walk_length=best_trial.config['walk_length'],
@@ -171,7 +172,10 @@ if __name__ == "__main__":
     node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
                                            train_data, val_data, test_data)
 
-    print(f"Node classification score on test split: {node_classification_prediction(node2vec_model, test_data)}")
+    # it is important to note that not all datasets have train_mask and test_mask.
+    # notably, only the pubmed citations networks have this info.
+    # As a result this should be taken up as a separate activity.
+    # print(f"Node classification score on test split: {node_classification_prediction(node2vec_model, test_data)}")
     print(f"Link prediction score on train: {link_prediction_cv(node2vec_model, train_data, train_data, best_op)}")
     print(f"Link prediction score on test: {link_prediction_cv(node2vec_model, train_data, test_data, best_op)}")
     print(f"Link prediction score on val: {link_prediction_cv(node2vec_model, train_data, val_data, best_op)}")

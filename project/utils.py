@@ -47,6 +47,8 @@ def viz_dataset_stats():
 
     for data in datasets:
         dataset = DatasetLoaderFactory().get(data, path, transform)
+        # from project.shallow_models.model_trainer import DataLoader
+        # train_data, test_data, val_data = DataLoader().load_data(data, path, 'cpu')
         print(f"Printing stats for :{dataset}")
         show_dataset_stats(dataset)
 
