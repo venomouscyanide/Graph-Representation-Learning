@@ -1,6 +1,7 @@
 import torch
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
+from torch_geometric.data import Dataset
 
 
 @torch.no_grad()
@@ -20,23 +21,37 @@ def plot_points(model, data, dataset):
     plt.show()
 
 
-class LinkEmbedder:
-    # TODO: complete edge prediction metrics
-    @staticmethod
-    def hadamard():
-        pass
+def show_dataset_stats(dataset: Dataset):
+    # Taken from https://colab.research.google.com/drive/1CILdAekIkIh-AX2EXwZ3ZsZ6VcCbwc0t?usp=sharing
+    data = dataset[0]
+    print(f'Dataset: {dataset}:')
+    print('======================')
+    print(f'Number of graphs: {len(dataset)}')
+    print(f'Number of features: {dataset.num_features}')
+    print(f'Number of classes: {dataset.num_classes}')
+    print(f'Number of nodes: {data.num_nodes}')
+    print(f'Number of edges: {data.num_edges}')
+    print(f'Average node degree: {data.num_edges / data.num_nodes:.2f}')
+    print(f'Contains isolated nodes: {data.has_isolated_nodes()}')
+    print(f'Contains self-loops: {data.has_self_loops()}')
+    print(f'Is undirected: {data.is_undirected()}')
+    print('======================')
 
-    @staticmethod
-    def max():
-        pass
 
-    @staticmethod
-    def min():
-        pass
+def viz_dataset_stats():
+    from project.dataset_loader_factory import DatasetLoaderFactory
 
-    @staticmethod
-    def mean():
-        pass
+    datasets = ['cs', 'physics', 'computers', 'photo', 'ego-facebook', 'karate', 'cora', 'citeseer', 'pubmed']
+    path = 'delete_me'
+    transform = None
 
-    def dot(self):
-        pass
+    for data in datasets:
+        dataset = DatasetLoaderFactory().get(data, path, transform)
+        # from project.shallow_models.model_trainer import DataLoader
+        # train_data, test_data, val_data = DataLoader().load_data(data, path, 'cpu')
+        print(f"Printing stats for :{dataset}")
+        show_dataset_stats(dataset)
+
+
+if __name__ == '__main__':
+    viz_dataset_stats()
