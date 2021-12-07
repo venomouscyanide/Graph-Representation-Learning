@@ -78,8 +78,8 @@ class DataLoader:
                                   add_negative_train_samples=True, split_labels=False),
                 T.ToDevice(device)
             ])
-        dataset_klass = DatasetLoaderFactory().get(dataset)
-        dataset = dataset_klass(path, name=dataset, transform=transform)
+        dataset = DatasetLoaderFactory().get(dataset, path, transform)
+        # all datasets contain only one graph, hence the indexing by 0
         train_data, val_data, test_data = dataset[0]
         return train_data, val_data, test_data
 
@@ -143,7 +143,7 @@ class Tuner:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Tuning for n2v/dw/<x> shallow encoders", )
+    parser = argparse.ArgumentParser(description="Run Tuning for n2v/dw shallow encoders", )
     parser.add_argument('--dataset', help='Choose the dataset to tune on', required=True, type=str)
     parser.add_argument('--gpu_count', help='Set available GPUs to tune on', required=True, type=int)
     parser.add_argument('--cpu_count', help='Set available CPUs to tune on', required=True, type=int)
@@ -161,6 +161,10 @@ if __name__ == "__main__":
     gpu_count = args.gpu_count
 
     HyperParameterTuning.NORMALIZE_FEATURES = args.norm_features
+
+    if args.model_name == 'deepwalk':
+        HyperParameterTuning.CONFIG['p'] = 1
+        HyperParameterTuning.CONFIG['q'] = 1
 
     device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
     train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device)
