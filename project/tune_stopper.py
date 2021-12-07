@@ -11,4 +11,4 @@ class TimeStopper(Stopper):
         return False
 
     def stop_all(self):
-        return time.time() - self._start > self.deadline
+        return time.time() - self._start > self._deadline
