@@ -10,6 +10,8 @@
 """
 from torch_geometric import seed_everything
 
+from project.tune_stopper import TimeStopper
+
 seed_everything(42)  # 42 is the answer to all
 
 import math
@@ -105,6 +107,7 @@ class Tuner:
             progress_reporter=reporter,
             local_dir=os.path.join(identifier, "ray_results"),
             log_to_file=True,
+            stop=TimeStopper(),
             resume="AUTO"
         )
 
