@@ -2,6 +2,7 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 from torch_geometric.data import Dataset
+from torch_geometric.utils import to_networkx
 
 
 @torch.no_grad()
@@ -38,6 +39,25 @@ def show_dataset_stats(dataset: Dataset):
     print('======================')
 
 
+def max_degree():
+    from project.dataset_loader_factory import DatasetLoaderFactory
+
+    datasets = ['cs', 'physics', 'computers', 'photo', 'ego-facebook', 'karate', 'cora', 'citeseer', 'pubmed']
+    path = 'delete_me'
+    transform = None
+
+    max_degree_values = {}
+
+    for data in datasets:
+        print(f"Processing {data}")
+        dataset = DatasetLoaderFactory().get(data, path, transform)
+        nx_graph = to_networkx(dataset[0])
+        max_degree = max(nx_graph.degree(), key=lambda x: x[1])[0]
+        max_degree_values[data] = max_degree
+
+    print(max_degree_values)
+
+
 def viz_dataset_stats():
     from project.dataset_loader_factory import DatasetLoaderFactory
 
@@ -54,4 +74,5 @@ def viz_dataset_stats():
 
 
 if __name__ == '__main__':
-    viz_dataset_stats()
+    # viz_dataset_stats()
+    max_degree()
