@@ -172,6 +172,7 @@ if __name__ == "__main__":
     node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
                                            train_data, val_data, test_data)
 
+    print(f'Data Normalization is set to: {HyperParameterTuning.NORMALIZE_FEATURES}')
     # it is important to note that not all datasets have train_mask and test_mask.
     # notably, only the pubmed citations networks have this info.
     # As a result this should be taken up as a separate activity.
