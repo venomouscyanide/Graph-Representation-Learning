@@ -60,26 +60,31 @@ class HyperParameterTuning:
         "num_val": 0.05,
         "num_test": 0.1
     }
-    NORMALIZE_FEATURES = True
+    NORMALIZE_FEATURES = False
+    AUGMENT_DEGREE_INFORMATION = False
+
+
+class MaxDegreeMapping:
+    MAPPING = {'cs': 11127, 'physics': 23597, 'computers': 12888, 'photo': 2198, 'ego-facebook': 346, 'karate': 33,
+               'cora': 1358, 'citeseer': 1422, 'pubmed': 11450}
 
 
 class DataLoader:
     def load_data(self, dataset: str, path: str, device: str):
+        transforms = []
         if HyperParameterTuning.NORMALIZE_FEATURES:
-            transform = T.Compose([
-                T.NormalizeFeatures(),
-                T.RandomLinkSplit(num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_val'],
-                                  num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_test'], is_undirected=True,
-                                  add_negative_train_samples=True, split_labels=False),
-                T.ToDevice(device)
-            ])
-        else:
-            transform = T.Compose([
-                T.RandomLinkSplit(num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_val'],
-                                  num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_test'], is_undirected=True,
-                                  add_negative_train_samples=True, split_labels=False),
-                T.ToDevice(device)
-            ])
+            transforms.append(T.NormalizeFeatures())
+
+        if HyperParameterTuning.AUGMENT_DEGREE_INFORMATION:
+            transforms.append(T.OneHotDegree(max_degree=MaxDegreeMapping.MAPPING[dataset]))
+
+        transforms.append(T.RandomLinkSplit(num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_val'],
+                                            num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_test'],
+                                            is_undirected=True,
+                                            add_negative_train_samples=True, split_labels=False))
+        transforms.append(T.ToDevice(device))
+
+        transform = T.Compose(transforms)
         dataset = DatasetLoaderFactory().get(dataset, path, transform)
         # all datasets contain only one graph, hence the indexing by 0
         train_data, val_data, test_data = dataset[0]
@@ -153,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--cpu_count', help='Set available CPUs to tune on', required=True, type=int)
     parser.add_argument('--model_name', help='Set model name', required=True, type=str)
     parser.add_argument('--norm_features', help='Norm node features', action='store_true')
+    parser.add_argument('--degree_information', help='Augment node degree information', action='store_true')
     parser.add_argument('--identifier', help='Set identifier', required=True, type=str)
     args = parser.parse_args()
 
@@ -165,6 +171,7 @@ if __name__ == "__main__":
     gpu_count = args.gpu_count
 
     HyperParameterTuning.NORMALIZE_FEATURES = args.norm_features
+    HyperParameterTuning.AUGMENT_DEGREE_INFORMATION = args.degree_information
 
     if args.model_name == 'deepwalk':
         HyperParameterTuning.CONFIG['p'] = 1
