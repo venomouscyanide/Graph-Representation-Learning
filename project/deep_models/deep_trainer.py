@@ -186,7 +186,7 @@ class TuneHelper:
         test_data = test_data.to(device)
 
         hidden_param = best_trial.config['in_out_channel_tuple']
-        out_param = hidden_param / 2
+        out_param = int(hidden_param / 2)
         best_trained_model = LinkPredModel(train_data.num_features, hidden_param, out_param, model_name,
                                            act_func=best_trial.config['activation_function'],
                                            norm=best_trial.config['use_norm'], p=best_trial.config['p'])
@@ -201,8 +201,8 @@ class TuneHelper:
 
         best_trained_model.load_state_dict(model_state)
 
-        validation_acc = TrainDeepNets.test(best_trained_model, val_data)
-        test_acc = TrainDeepNets.test(best_trained_model, test_data)
+        validation_acc = TrainDeepNets.test(val_data, best_trained_model)
+        test_acc = TrainDeepNets.test(test_data, best_trained_model)
 
         print("Best trial val set accuracy: {}".format(validation_acc))
         print("Best trial test set accuracy: {}".format(test_acc))
