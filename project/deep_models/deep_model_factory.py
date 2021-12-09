@@ -1,4 +1,4 @@
-from graphgym.contrib.layer.idconv import GINIDConvLayer, SAGEIDConvLayer, GCNIDConv
+from graphgym.contrib.layer.idconv import GINIDConvLayer, SAGEIDConvLayer, GCNIDConvLayer
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv, GINConv
 
 
@@ -15,7 +15,7 @@ class ModelConvLoader:
         if model_name == 'gin':
             return GINConv
         if model_name == 'id_gcn':
-            return GCNIDConv
+            return GCNIDConvLayer
         if model_name == 'id_sage':
             return SAGEIDConvLayer
         if model_name == 'id_gin':

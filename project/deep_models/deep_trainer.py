@@ -1,8 +1,13 @@
 # Ref: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/link_pred.py
 """
 Usage:
-#TODO: complete usage.
-    python3.9
+    python3.9 -m project.deep_models.deep_trainer --dataset "karate"
+                                                  --gpu_count 0
+                                                  --cpu_count 8
+                                                  --model_name "gcn"
+                                                  --identifier "karate_gcn"
+                                                  --degree_information
+                                                  --use_norm
 """
 import os
 
@@ -48,7 +53,8 @@ class HyperParameterTuning:
 
 
 class TrainDeepNets:
-    def train(self, model, optimizer, train_data, criterion):
+    @staticmethod
+    def train(model, optimizer, train_data, criterion):
         model.train()
         optimizer.zero_grad()
         z = model.encode(train_data.x, train_data.edge_index)
@@ -73,16 +79,19 @@ class TrainDeepNets:
         optimizer.step()
         return loss
 
+    @staticmethod
     @torch.no_grad()
-    def test(self, data, model):
+    def test(data, model):
         model.eval()
         z = model.encode(data.x, data.edge_index)
         out = model.decode(z, data.edge_label_index).view(-1).sigmoid()
         return roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy())
 
-    def train_helper(self, gpu_count, train_data, val_data, test_data, model_name, config, checkpoint_dir=None,
+    @staticmethod
+    def train_helper(config, gpu_count, train_data, val_data, test_data, model_name, checkpoint_dir=None,
                      verbose=False):
-        hidden_param, out_param = config['in_out_channel_tuple']
+        hidden_param = config['in_out_channel_tuple']
+        out_param = int(hidden_param / 2)
         device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
 
         model = LinkPredModel(train_data.num_features, hidden_param, out_param, model_name,
@@ -104,9 +113,9 @@ class TrainDeepNets:
 
         best_val_auc = final_test_auc = 0
         for epoch in range(1, 10001):
-            loss = self.train(model=model, optimizer=optimizer, criterion=criterion, train_data=train_data)
-            val_auc = self.test(val_data, model)
-            test_auc = self.test(test_data, model)
+            loss = TrainDeepNets.train(model=model, optimizer=optimizer, criterion=criterion, train_data=train_data)
+            val_auc = TrainDeepNets.test(val_data, model)
+            test_auc = TrainDeepNets.test(test_data, model)
             if val_auc > best_val_auc:
                 best_val = val_auc
                 final_test_auc = test_auc
@@ -141,6 +150,13 @@ class TuneHelper:
             max_t=HyperParameterTuning.RAYTUNE_CONFIG['max_epochs'],
             grace_period=1,
             reduction_factor=2)
+
+        # Use me for testing
+        # TrainDeepNets.train_helper(
+        #     {"in_out_channel_tuple": 256, "activation_function": nn.ELU, "use_norm": False, "p": 0.5, "lr": 0.001},
+        #     gpu_count, train_data, val_data, test_data, "gat", )
+        # comment above line if not needed
+
         reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
         trainer_function = TrainDeepNets.train_helper
         result = tune.run(
@@ -166,7 +182,8 @@ class TuneHelper:
         val_data = val_data.to(device)
         test_data = test_data.to(device)
 
-        hidden_param, out_param = best_trial.config['in_out_channel_tuple']
+        hidden_param = best_trial.config['in_out_channel_tuple']
+        out_param = hidden_param / 2
         best_trained_model = LinkPredModel(train_data.num_features, hidden_param, out_param, model_name,
                                            act_func=best_trial.config['activation_function'],
                                            norm=best_trial.config['use_norm'], p=best_trial.config['p'])
