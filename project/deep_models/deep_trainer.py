@@ -11,6 +11,7 @@ Usage:
 """
 import os
 import warnings
+
 warnings.simplefilter(action="ignore")
 
 from ray.tune import CLIReporter
@@ -30,7 +31,6 @@ from ray import tune
 from sklearn.metrics import roc_auc_score
 
 from torch_geometric.utils import negative_sampling
-
 
 
 class HyperParameterTuning:
@@ -57,10 +57,13 @@ class HyperParameterTuning:
 
 class TrainDeepNets:
     @staticmethod
-    def train(model, optimizer, train_data, criterion):
+    def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()
         optimizer.zero_grad()
-        z = model.encode(train_data.x, train_data.edge_index)
+        if torch.cuda.is_available() and gpu_count:
+            z = model.module.encode(train_data.x, train_data.edge_index)
+        else:
+            z = model.encode(train_data.x, train_data.edge_index)
 
         # We perform a new round of negative sampling for every training epoch:
         neg_edge_index = negative_sampling(
@@ -76,7 +79,11 @@ class TrainDeepNets:
             train_data.edge_label.new_zeros(neg_edge_index.size(1))
         ], dim=0)
 
-        out = model.decode(z, edge_label_index).view(-1)
+        if torch.cuda.is_available() and gpu_count:
+            out = model.module.decode(z, edge_label_index).view(-1)
+        else:
+            out = model.decode(z, edge_label_index).view(-1)
+
         loss = criterion(out, edge_label)
         loss.backward()
         optimizer.step()
@@ -84,10 +91,16 @@ class TrainDeepNets:
 
     @staticmethod
     @torch.no_grad()
-    def test(data, model):
+    def test(data, model, gpu_count):
         model.eval()
-        z = model.encode(data.x, data.edge_index)
-        out = model.decode(z, data.edge_label_index).view(-1).sigmoid()
+        if torch.cuda.is_available() and gpu_count:
+            z = model.module.encode(data.x, data.edge_index)
+        else:
+            z = model.encode(data.x, data.edge_index)
+        if torch.cuda.is_available() and gpu_count:
+            out = model.module.decode(z, data.edge_label_index).view(-1).sigmoid()
+        else:
+            out = model.decode(z, data.edge_label_index).view(-1).sigmoid()
         return roc_auc_score(data.edge_label.cpu().numpy(), out.cpu().numpy())
 
     @staticmethod
@@ -116,9 +129,10 @@ class TrainDeepNets:
 
         best_val_auc = final_test_auc = 0
         for epoch in range(1, 10001):
-            loss = TrainDeepNets.train(model=model, optimizer=optimizer, criterion=criterion, train_data=train_data)
-            val_auc = TrainDeepNets.test(val_data, model)
-            test_auc = TrainDeepNets.test(test_data, model)
+            loss = TrainDeepNets.train(model=model, optimizer=optimizer, criterion=criterion, train_data=train_data,
+                                       gpu_count=gpu_count)
+            val_auc = TrainDeepNets.test(val_data, model, gpu_count)
+            test_auc = TrainDeepNets.test(test_data, model, gpu_count)
             if val_auc > best_val_auc:
                 best_val = val_auc
                 final_test_auc = test_auc
