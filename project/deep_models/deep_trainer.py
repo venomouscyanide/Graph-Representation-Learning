@@ -61,7 +61,7 @@ class TrainDeepNets:
         model.train()
         optimizer.zero_grad()
         if torch.cuda.is_available() and gpu_count:
-            z = model.module.encode(train_data.x, train_data.edge_index)
+            z = model.module.encode(train_data.x, train_data.edge_index, move_to_cuda=True)
         else:
             z = model.encode(train_data.x, train_data.edge_index)
 
@@ -94,7 +94,7 @@ class TrainDeepNets:
     def test(data, model, gpu_count):
         model.eval()
         if torch.cuda.is_available() and gpu_count:
-            z = model.module.encode(data.x, data.edge_index)
+            z = model.module.encode(data.x, data.edge_index, move_to_cuda=True)
         else:
             z = model.encode(data.x, data.edge_index)
         if torch.cuda.is_available() and gpu_count:

@@ -1,7 +1,7 @@
 # Ref: https://github.com/pyg-team/pytorch_geometric/blob/master/examples/link_pred.py
 import torch
 from torch.nn import BatchNorm1d
-from torch_geometric.nn import GIN, BatchNorm
+from torch_geometric.nn import GIN
 import torch.nn.functional as F
 
 from project.deep_models.deep_model_factory import ModelConvLoader
@@ -37,8 +37,11 @@ class LinkPredModel(torch.nn.Module):
         if norm:
             self.batch_norm = BatchNorm1d(hidden_channels)
 
-    def encode(self, x, edge_index):
+    def encode(self, x, edge_index, move_to_cuda=False):
         node_id_index = torch.tensor([_ for _ in range(x.size(0))])
+        if move_to_cuda:
+            node_id_index.to('cuda')
+
         if self.id_version:
             x = self.conv1(x, edge_index, id=node_id_index)
         else:
