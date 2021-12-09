@@ -215,8 +215,8 @@ class TuneHelper:
 
         best_trained_model.load_state_dict(model_state)
 
-        validation_acc = TrainDeepNets.test(val_data, best_trained_model)
-        test_acc = TrainDeepNets.test(test_data, best_trained_model)
+        validation_acc = TrainDeepNets.test(val_data, best_trained_model, gpu_count)
+        test_acc = TrainDeepNets.test(test_data, best_trained_model, gpu_count)
 
         print("Best trial val set accuracy: {}".format(validation_acc))
         print("Best trial test set accuracy: {}".format(test_acc))
