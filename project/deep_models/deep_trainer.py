@@ -40,6 +40,7 @@ class HyperParameterTuning:
         "lr": tune.loguniform(1e-4, 1e-1),
         "activation_function": tune.choice([torch.nn.ReLU, torch.nn.ELU, torch.nn.Tanh]),
         "in_out_channel_tuple": tune.choice([256, 128, 64]),
+        "use_norm": False
     }
 
     RAYTUNE_CONFIG = {
