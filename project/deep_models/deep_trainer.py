@@ -71,19 +71,20 @@ class TrainDeepNets:
         neg_edge_index = negative_sampling(
             edge_index=train_data.edge_index, num_nodes=train_data.num_nodes,
             num_neg_samples=train_data.edge_label_index.size(1), method='dense')
-        neg_edge_index.to("cuda:0")
-        for _ in range(10):
-            print(device, train_data.edge_label_index.get_device(), neg_edge_index.get_device())
+        neg_edge_index.to(device)
+
         edge_label_index = torch.cat(
             [train_data.edge_label_index, neg_edge_index],
             dim=-1,
         )
         edge_label_index.to(device)
+
         edge_label = torch.cat([
             train_data.edge_label,
             train_data.edge_label.new_zeros(neg_edge_index.size(1))
         ], dim=0)
         edge_label.to(device)
+
         if torch.cuda.is_available() and gpu_count:
             out = model.module.decode(z, edge_label_index).view(-1)
         else:

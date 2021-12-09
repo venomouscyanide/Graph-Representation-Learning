@@ -39,8 +39,6 @@ class LinkPredModel(torch.nn.Module):
 
     def encode(self, x, edge_index, move_to_cuda=False):
         node_id_index = torch.tensor([_ for _ in range(x.size(0))])
-        for i in range(10):
-            print("Move to cuda is", move_to_cuda)
         if move_to_cuda:
             node_id_index.to(x.get_device())
 
