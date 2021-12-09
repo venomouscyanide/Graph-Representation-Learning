@@ -152,7 +152,7 @@ class TuneHelper:
     def tune(self, dataset, gpu_count, cpu_count, model_name, identifier):
         path = f'temp/{identifier}'
 
-        device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
+        device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
         train_data, test_data, val_data = DataLoader().load_data(dataset, path, device,
                                                                  HyperParameterTuning.FEATURE_NORM,
                                                                  HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
