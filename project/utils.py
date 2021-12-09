@@ -1,8 +1,11 @@
 import torch
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
+from torch_geometric import transforms as T
 from torch_geometric.data import Dataset
 from torch_geometric.utils import to_networkx
+
+from project.dataset_loader_factory import DatasetLoaderFactory
 
 
 @torch.no_grad()
@@ -76,3 +79,31 @@ def viz_dataset_stats():
 if __name__ == '__main__':
     # viz_dataset_stats()
     max_degree()
+
+
+class MaxDegreeMapping:
+    MAPPING = {'cs': 11127, 'physics': 23597, 'computers': 12888, 'photo': 2198, 'ego-facebook': 346, 'karate': 33,
+               'cora': 1358, 'citeseer': 1422, 'pubmed': 11450}
+
+
+class DataLoader:
+    def load_data(self, dataset: str, path: str, device: str, norm_features: bool, augment_degree_info: bool, num_val,
+                  num_test):
+        transforms = []
+        if norm_features:
+            transforms.append(T.NormalizeFeatures())
+
+        if augment_degree_info:
+            transforms.append(T.OneHotDegree(max_degree=MaxDegreeMapping.MAPPING[dataset]))
+
+        transforms.append(T.RandomLinkSplit(num_val=num_val,
+                                            num_test=num_test,
+                                            is_undirected=True,
+                                            add_negative_train_samples=True, split_labels=False))
+        transforms.append(T.ToDevice(device))
+
+        transform = T.Compose(transforms)
+        dataset = DatasetLoaderFactory().get(dataset, path, transform)
+        # all datasets contain only one graph, hence the indexing by 0
+        train_data, val_data, test_data = dataset[0]
+        return train_data, val_data, test_data

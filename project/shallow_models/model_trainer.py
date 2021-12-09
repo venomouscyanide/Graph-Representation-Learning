@@ -11,6 +11,7 @@
 from torch_geometric import seed_everything
 
 from project.tune_stopper import TimeStopper
+from project.utils import DataLoader
 
 seed_everything(42)  # 42 is the answer to all
 
@@ -25,13 +26,10 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
-import torch_geometric.transforms as T
-
 import warnings
 
-from project.dataset_loader_factory import DatasetLoaderFactory
 from project.shallow_models.model_factory import ModelFactory, ModelTrainFactory
-from project.shallow_models.utils import link_prediction_cv, node_classification_prediction, LinkOperators
+from project.shallow_models.utils import link_prediction_cv, LinkOperators
 
 warnings.simplefilter(action="ignore")
 
@@ -62,33 +60,6 @@ class HyperParameterTuning:
     }
     NORMALIZE_FEATURES = False
     AUGMENT_DEGREE_INFORMATION = False
-
-
-class MaxDegreeMapping:
-    MAPPING = {'cs': 11127, 'physics': 23597, 'computers': 12888, 'photo': 2198, 'ego-facebook': 346, 'karate': 33,
-               'cora': 1358, 'citeseer': 1422, 'pubmed': 11450}
-
-
-class DataLoader:
-    def load_data(self, dataset: str, path: str, device: str):
-        transforms = []
-        if HyperParameterTuning.NORMALIZE_FEATURES:
-            transforms.append(T.NormalizeFeatures())
-
-        if HyperParameterTuning.AUGMENT_DEGREE_INFORMATION:
-            transforms.append(T.OneHotDegree(max_degree=MaxDegreeMapping.MAPPING[dataset]))
-
-        transforms.append(T.RandomLinkSplit(num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_val'],
-                                            num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG['num_test'],
-                                            is_undirected=True,
-                                            add_negative_train_samples=True, split_labels=False))
-        transforms.append(T.ToDevice(device))
-
-        transform = T.Compose(transforms)
-        dataset = DatasetLoaderFactory().get(dataset, path, transform)
-        # all datasets contain only one graph, hence the indexing by 0
-        train_data, val_data, test_data = dataset[0]
-        return train_data, val_data, test_data
 
 
 class Tuner:
@@ -178,7 +149,14 @@ if __name__ == "__main__":
         HyperParameterTuning.CONFIG['q'] = 1
 
     device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
-    train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device)
+    train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device,
+                                                             HyperParameterTuning.NORMALIZE_FEATURES,
+                                                             HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
+                                                             num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+                                                                 'num_val'],
+                                                             num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+                                                                 'num_test']
+                                                             )
     node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
                                            train_data, val_data, test_data)
 
