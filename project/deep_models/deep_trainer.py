@@ -70,7 +70,7 @@ class TrainDeepNets:
         # We perform a new round of negative sampling for every training epoch:
         neg_edge_index = negative_sampling(
             edge_index=train_data.edge_index, num_nodes=train_data.num_nodes,
-            num_neg_samples=train_data.edge_label_index.size(1), method='sparse')
+            num_neg_samples=train_data.edge_label_index.size(1), method='dense')
         neg_edge_index.to("cuda:0")
         for _ in range(10):
             print(device, train_data.edge_label_index.get_device(), neg_edge_index.get_device())
