@@ -60,7 +60,7 @@ class TrainDeepNets:
     def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()
         optimizer.zero_grad()
-        device = train_data.edge_label_index.get_device()
+        device = torch.cuda.current_device()
 
         if torch.cuda.is_available() and gpu_count:
             z = model.module.encode(train_data.x, train_data.edge_index, move_to_cuda=True)
@@ -73,7 +73,7 @@ class TrainDeepNets:
             num_neg_samples=train_data.edge_label_index.size(1), method='sparse')
         neg_edge_index.to(device)
         for _ in range(10):
-            print(train_data.edge_label_index.get_device(), neg_edge_index.get_device())
+            print(device, train_data.edge_label_index.get_device(), neg_edge_index.get_device())
         edge_label_index = torch.cat(
             [train_data.edge_label_index, neg_edge_index],
             dim=-1,
