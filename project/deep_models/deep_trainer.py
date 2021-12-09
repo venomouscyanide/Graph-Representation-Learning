@@ -9,6 +9,7 @@ Usage:
                                                   --degree_information
                                                   --use_norm
 """
+import copy
 import os
 import warnings
 
@@ -39,11 +40,12 @@ class HyperParameterTuning:
         "lr": tune.loguniform(1e-4, 1e-1),
         "activation_function": tune.choice([torch.nn.ReLU, torch.nn.ELU, torch.nn.Tanh]),
         "in_out_channel_tuple": tune.choice([256, 128, 64]),
+        "use_norm": False
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 50,
-        'max_epochs': 100
+        'num_samples': 150,
+        'max_epochs': 500
     }
 
     DATASET_SPLIT_CONFIG = {
@@ -60,6 +62,8 @@ class TrainDeepNets:
     def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()
         optimizer.zero_grad()
+        device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
+
         if torch.cuda.is_available() and gpu_count:
             z = model.module.encode(train_data.x, train_data.edge_index, move_to_cuda=True)
         else:
@@ -68,16 +72,20 @@ class TrainDeepNets:
         # We perform a new round of negative sampling for every training epoch:
         neg_edge_index = negative_sampling(
             edge_index=train_data.edge_index, num_nodes=train_data.num_nodes,
-            num_neg_samples=train_data.edge_label_index.size(1), method='sparse')
+            num_neg_samples=train_data.edge_label_index.size(1), method='dense')
+        neg_edge_index.to(device)
 
         edge_label_index = torch.cat(
             [train_data.edge_label_index, neg_edge_index],
             dim=-1,
         )
+        edge_label_index.to(device)
+
         edge_label = torch.cat([
             train_data.edge_label,
             train_data.edge_label.new_zeros(neg_edge_index.size(1))
         ], dim=0)
+        edge_label.to(device)
 
         if torch.cuda.is_available() and gpu_count:
             out = model.module.decode(z, edge_label_index).view(-1)
@@ -209,14 +217,17 @@ class TuneHelper:
         best_checkpoint_dir = best_trial.checkpoint.value
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
 
-        # TODO: Am I required?
-        # if torch.cuda.is_available() and gpu_count:
-        #     model_state['embedding.weight'] = model_state.pop('module.embedding.weight')
+        if torch.cuda.is_available() and gpu_count:
+            copy_of_model_state = copy.deepcopy(model_state)
+            for key in model_state.keys():
+                updated_key = key.split('module.')[-1]
+                copy_of_model_state[updated_key] = copy_of_model_state.pop(key)
+            model_state = copy_of_model_state
 
         best_trained_model.load_state_dict(model_state)
 
-        validation_acc = TrainDeepNets.test(val_data, best_trained_model, gpu_count)
-        test_acc = TrainDeepNets.test(test_data, best_trained_model, gpu_count)
+        validation_acc = TrainDeepNets.test(val_data, best_trained_model, gpu_count=0)
+        test_acc = TrainDeepNets.test(test_data, best_trained_model, gpu_count=0)
 
         print("Best trial val set accuracy: {}".format(validation_acc))
         print("Best trial test set accuracy: {}".format(test_acc))
