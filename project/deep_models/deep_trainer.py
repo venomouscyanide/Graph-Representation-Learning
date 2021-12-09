@@ -61,7 +61,7 @@ class TrainDeepNets:
     def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()
         optimizer.zero_grad()
-        device = torch.cuda.current_device()
+        device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
 
         if torch.cuda.is_available() and gpu_count:
             z = model.module.encode(train_data.x, train_data.edge_index, move_to_cuda=True)
