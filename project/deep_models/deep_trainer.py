@@ -10,6 +10,8 @@ Usage:
                                                   --use_norm
 """
 import os
+import warnings
+warnings.simplefilter(action="ignore")
 
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
@@ -30,12 +32,13 @@ from sklearn.metrics import roc_auc_score
 from torch_geometric.utils import negative_sampling
 
 
+
 class HyperParameterTuning:
     CONFIG = {
         "p": tune.choice([0.4, 0.5, 0.6, 0.7]),
         "lr": tune.loguniform(1e-4, 1e-1),
         "activation_function": tune.choice([torch.nn.ReLU, torch.nn.ELU, torch.nn.Tanh]),
-        "in_out_channel_tuple": tune.choice([(256, 128), (128, 64), (64, 32)]),
+        "in_out_channel_tuple": tune.choice([256, 128, 64]),
     }
 
     RAYTUNE_CONFIG = {
@@ -124,7 +127,7 @@ class TrainDeepNets:
                 path = os.path.join(checkpoint_dir, "checkpoint")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)
 
-            tune.report(loss=loss, accuracy=val_auc, test_acc=test_auc)
+            tune.report(loss=loss.item(), accuracy=val_auc, test_acc=test_auc)
             if verbose:
                 print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val: {val_auc:.4f}, Test: {test_auc:.4f}')
 
