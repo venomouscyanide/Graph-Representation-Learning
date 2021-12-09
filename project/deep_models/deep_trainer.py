@@ -9,6 +9,7 @@ Usage:
                                                   --degree_information
                                                   --use_norm
 """
+import copy
 import os
 import warnings
 
@@ -215,9 +216,12 @@ class TuneHelper:
         best_checkpoint_dir = best_trial.checkpoint.value
         model_state, optimizer_state = torch.load(os.path.join(best_checkpoint_dir, "checkpoint"))
 
-        # TODO: Am I required?
-        # if torch.cuda.is_available() and gpu_count:
-        #     model_state['embedding.weight'] = model_state.pop('module.embedding.weight')
+        if torch.cuda.is_available() and gpu_count:
+            copy_of_model_state = copy.deepcopy(model_state)
+            for key in model_state.keys():
+                updated_key = key.split('module.')[-1]
+                copy_of_model_state[updated_key] = copy_of_model_state.pop(key)
+            model_state = copy_of_model_state
 
         best_trained_model.load_state_dict(model_state)
 
