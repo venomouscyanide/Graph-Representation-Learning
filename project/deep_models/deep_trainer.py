@@ -44,7 +44,7 @@ class HyperParameterTuning:
     }
 
     RAYTUNE_CONFIG = {
-        'num_samples': 50,
+        'num_samples': 150,
         'max_epochs': 500
     }
 
