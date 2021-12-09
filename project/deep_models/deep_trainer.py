@@ -60,7 +60,7 @@ class TrainDeepNets:
     def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()
         optimizer.zero_grad()
-        device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
+        device = train_data.edge_label_index.get_device()
 
         if torch.cuda.is_available() and gpu_count:
             z = model.module.encode(train_data.x, train_data.edge_index, move_to_cuda=True)
@@ -78,7 +78,6 @@ class TrainDeepNets:
             [train_data.edge_label_index, neg_edge_index],
             dim=-1,
         )
-
         edge_label_index.to(device)
         edge_label = torch.cat([
             train_data.edge_label,

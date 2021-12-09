@@ -42,7 +42,7 @@ class LinkPredModel(torch.nn.Module):
         for i in range(10):
             print("Move to cuda is", move_to_cuda)
         if move_to_cuda:
-            node_id_index.to('cuda')
+            node_id_index.to(x.get_device())
 
         if self.id_version:
             x = self.conv1(x, edge_index, id=node_id_index)
