@@ -72,12 +72,13 @@ class TrainDeepNets:
             edge_index=train_data.edge_index, num_nodes=train_data.num_nodes,
             num_neg_samples=train_data.edge_label_index.size(1), method='sparse')
         neg_edge_index.to(device)
+        for _ in range(10):
+            print(train_data.edge_label_index.get_device(), neg_edge_index.get_device())
         edge_label_index = torch.cat(
             [train_data.edge_label_index, neg_edge_index],
             dim=-1,
         )
-        for _ in range(10):
-            print(train_data.edge_label_index.get_device(), neg_edge_index.get_device())
+
         edge_label_index.to(device)
         edge_label = torch.cat([
             train_data.edge_label,
