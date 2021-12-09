@@ -1,5 +1,5 @@
 # Assignment 1 
-Assignment 1 part of the GRL course let by [Dr. Amirali Salehi-Abari](https://www.abari.ca/)
+Assignment 1 part of the GRL course led by [Dr. Amirali Salehi-Abari](https://www.abari.ca/)
 
 
 ## Problem Definition
