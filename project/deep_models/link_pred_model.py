@@ -38,10 +38,10 @@ class LinkPredModel(torch.nn.Module):
             self.batch_norm = BatchNorm1d(hidden_channels)
 
     def encode(self, x, edge_index, move_to_cuda=False):
-        node_id_index = torch.tensor([_ for _ in range(x.size(0))])
+        device = 'cpu'
         if move_to_cuda:
             device = "cuda"
-            node_id_index.to(device)
+        node_id_index = torch.tensor([_ for _ in range(x.size(0))], device=device)
 
         if self.id_version:
             x = self.conv1(x, edge_index, id=node_id_index)
