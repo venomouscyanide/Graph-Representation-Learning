@@ -40,7 +40,7 @@ class LinkPredModel(torch.nn.Module):
     def encode(self, x, edge_index, move_to_cuda=False):
         device = 'cpu'
         if move_to_cuda:
-            device = "cuda"
+            device = "cuda:0"
         node_id_index = torch.tensor([_ for _ in range(x.size(0))])
         node_id_index.to(device)
         for _ in range(10):
