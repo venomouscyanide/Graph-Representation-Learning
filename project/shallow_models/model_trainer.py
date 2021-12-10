@@ -149,7 +149,7 @@ if __name__ == "__main__":
         HyperParameterTuning.CONFIG['q'] = 1
 
     device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
-    train_data, test_data, val_data = DataLoader().load_data(args.dataset, path, device,
+    train_data, val_data, test_data = DataLoader().load_data(args.dataset, path, device,
                                                              HyperParameterTuning.NORMALIZE_FEATURES,
                                                              HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
                                                              num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[

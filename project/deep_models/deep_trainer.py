@@ -161,7 +161,7 @@ class TuneHelper:
         path = f'temp/{identifier}'
 
         device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
-        train_data, test_data, val_data = DataLoader().load_data(dataset, path, device,
+        train_data, val_data, test_data = DataLoader().load_data(dataset, path, device,
                                                                  HyperParameterTuning.FEATURE_NORM,
                                                                  HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
                                                                  num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
