@@ -13,7 +13,7 @@ import copy
 import os
 import warnings
 
-warnings.simplefilter(action="ignore")
+warnings.filterwarnings(action="ignore")
 
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
