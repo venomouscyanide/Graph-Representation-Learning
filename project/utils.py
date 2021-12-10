@@ -88,7 +88,10 @@ class MaxDegreeMapping:
 
 class DataLoader:
     def load_data(self, dataset: str, path: str, device: str, norm_features: bool, augment_degree_info: bool, num_val,
-                  num_test):
+                  num_test, add_negative_during_load=True):
+        """
+        add_negative_during_load = False for deep models as negative sampling is uniquely created for each epoch
+        """
         transforms = []
         if norm_features:
             transforms.append(T.NormalizeFeatures())
@@ -99,7 +102,7 @@ class DataLoader:
         transforms.append(T.RandomLinkSplit(num_val=num_val,
                                             num_test=num_test,
                                             is_undirected=True,
-                                            add_negative_train_samples=True, split_labels=False))
+                                            add_negative_train_samples=add_negative_during_load, split_labels=False))
         transforms.append(T.ToDevice(device))
 
         transform = T.Compose(transforms)

@@ -167,7 +167,8 @@ class TuneHelper:
                                                                  num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
                                                                      'num_val'],
                                                                  num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
-                                                                     'num_test'])
+                                                                     'num_test'],
+                                                                 add_negative_during_load=False)
 
         scheduler = ASHAScheduler(
             metric="loss",
