@@ -204,6 +204,7 @@ class TuneHelper:
         print("Best trial final train loss: {}".format(best_trial.last_result["loss"]))
         print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
 
+        device = 'cpu'
         train_data = train_data.to(device)
         val_data = val_data.to(device)
         test_data = test_data.to(device)
