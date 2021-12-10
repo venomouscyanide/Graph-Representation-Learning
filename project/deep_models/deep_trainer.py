@@ -146,11 +146,11 @@ class TrainDeepNets:
                 best_val = val_auc
                 final_test_auc = test_auc
 
-            with tune.checkpoint_dir(epoch) as checkpoint_dir:
-                path = os.path.join(checkpoint_dir, "checkpoint")
-                torch.save((model.state_dict(), optimizer.state_dict()), path)
+            # with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            #     path = os.path.join(checkpoint_dir, "checkpoint")
+            #     torch.save((model.state_dict(), optimizer.state_dict()), path)
 
-            tune.report(loss=loss.item(), accuracy=val_auc, test_acc=test_auc)
+            # tune.report(loss=loss.item(), accuracy=val_auc, test_acc=test_auc)
             if verbose:
                 print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Val: {val_auc:.4f}, Test: {test_auc:.4f}')
 
@@ -178,9 +178,9 @@ class TuneHelper:
             reduction_factor=2)
 
         # Use me for testing
-        # TrainDeepNets.train_helper(
-        #     {"in_out_channel_tuple": 256, "activation_function": nn.ELU, "use_norm": False, "p": 0.5, "lr": 0.001},
-        #     gpu_count, train_data, val_data, test_data, "gat", )
+        TrainDeepNets.train_helper(
+            {"in_out_channel_tuple": 256, "activation_function": nn.ELU, "use_norm": False, "p": 0.5, "lr": 0.001},
+            gpu_count, train_data, val_data, test_data, "id_gin", )
         # comment above line if not needed
 
         reporter = CLIReporter(metric_columns=["loss", "accuracy", "training_iteration"])
