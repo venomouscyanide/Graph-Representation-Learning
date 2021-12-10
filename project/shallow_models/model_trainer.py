@@ -169,3 +169,4 @@ if __name__ == "__main__":
     print(f"Link prediction score on test: {link_prediction(node2vec_model, train_data, test_data, best_op)}")
     print(f"Link prediction score on val: {link_prediction(node2vec_model, train_data, val_data, best_op)}")
     print(f"Data Set is: {args.dataset}")
+    print(f"Identifier info: {args.identifier}")
