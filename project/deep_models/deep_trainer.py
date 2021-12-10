@@ -58,6 +58,7 @@ class HyperParameterTuning:
 
 
 class TrainDeepNets:
+    # TODO: ID CONV layers do not work on GPU!
     @staticmethod
     def train(model, optimizer, train_data, criterion, gpu_count):
         model.train()

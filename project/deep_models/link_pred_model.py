@@ -43,8 +43,6 @@ class LinkPredModel(torch.nn.Module):
             device = "cuda"
         node_id_index = torch.tensor([_ for _ in range(x.size(0))], device=device)
 
-        for _ in range(10):
-            print(x.get_device(), edge_index.get_device(), node_id_index.get_device(), move_to_cuda)
         if self.id_version:
             x = self.conv1(x, edge_index, id=node_id_index)
         else:
