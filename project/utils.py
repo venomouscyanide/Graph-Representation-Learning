@@ -100,6 +100,7 @@ class CustomDataLoader:
             transforms.append(T.OneHotDegree(max_degree=MaxDegreeMapping.MAPPING[dataset]))
 
         transforms.append(T.RandomLinkSplit(num_val=num_val,
+                                            neg_sampling_ratio=1.0,
                                             num_test=num_test,
                                             is_undirected=True,
                                             add_negative_train_samples=add_negative_during_load, split_labels=False))
