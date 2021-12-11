@@ -86,7 +86,7 @@ class MaxDegreeMapping:
                'cora': 1358, 'citeseer': 1422, 'pubmed': 11450}
 
 
-class DataLoader:
+class CustomDataLoader:
     def load_data(self, dataset: str, path: str, device: str, norm_features: bool, augment_degree_info: bool, num_val,
                   num_test, add_negative_during_load=True):
         """

@@ -22,7 +22,7 @@ from torch_geometric import seed_everything
 
 from project.deep_models.link_pred_model import LinkPredModel
 from project.tune_stopper import TimeStopper
-from project.utils import DataLoader
+from project.utils import CustomDataLoader
 
 seed_everything(42)  # 42 is the answer to all
 
@@ -161,14 +161,14 @@ class TuneHelper:
         path = f'temp/{identifier}'
 
         device = "cuda" if (torch.cuda.is_available() and gpu_count) else "cpu"
-        train_data, val_data, test_data = DataLoader().load_data(dataset, path, device,
-                                                                 HyperParameterTuning.FEATURE_NORM,
-                                                                 HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
-                                                                 num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+        train_data, val_data, test_data = CustomDataLoader().load_data(dataset, path, device,
+                                                                       HyperParameterTuning.FEATURE_NORM,
+                                                                       HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
+                                                                       num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
                                                                      'num_val'],
-                                                                 num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+                                                                       num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
                                                                      'num_test'],
-                                                                 add_negative_during_load=False)
+                                                                       add_negative_during_load=False)
 
         scheduler = ASHAScheduler(
             metric="loss",

@@ -11,7 +11,7 @@
 from torch_geometric import seed_everything
 
 from project.tune_stopper import TimeStopper
-from project.utils import DataLoader
+from project.utils import CustomDataLoader
 
 seed_everything(42)  # 42 is the answer to all
 
@@ -149,14 +149,14 @@ if __name__ == "__main__":
         HyperParameterTuning.CONFIG['q'] = 1
 
     device = "cuda:0" if (torch.cuda.is_available() and gpu_count) else "cpu"
-    train_data, val_data, test_data = DataLoader().load_data(args.dataset, path, device,
-                                                             HyperParameterTuning.NORMALIZE_FEATURES,
-                                                             HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
-                                                             num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+    train_data, val_data, test_data = CustomDataLoader().load_data(args.dataset, path, device,
+                                                                   HyperParameterTuning.NORMALIZE_FEATURES,
+                                                                   HyperParameterTuning.AUGMENT_DEGREE_INFORMATION,
+                                                                   num_val=HyperParameterTuning.DATASET_SPLIT_CONFIG[
                                                                  'num_val'],
-                                                             num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
+                                                                   num_test=HyperParameterTuning.DATASET_SPLIT_CONFIG[
                                                                  'num_test']
-                                                             )
+                                                                   )
     node2vec_model, best_op = Tuner().tune(path, cpu_count, gpu_count, args.dataset, args.identifier, args.model_name,
                                            train_data, val_data, test_data)
 
