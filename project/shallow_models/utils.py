@@ -28,30 +28,15 @@ def link_prediction(model, train_data, test_data, operator):
     # test_data can be test/validation test. The name is rather deceiving.
     model = model()
 
-    lr_clf = LogisticRegression(max_iter=150, solver='lbfgs')
-    link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
-
-    link_features_train_128 = operator(model[train_data.edge_label_index[0]], model[train_data.edge_label_index[1]])
-    link_features_test_128 = operator(model[test_data.edge_label_index[0]], model[test_data.edge_label_index[1]])
-
-    link_pred_pipeline.fit(link_features_train_128.detach().cpu().numpy(), train_data.edge_label.detach().cpu().numpy())
-    score = link_pred_pipeline.score(link_features_test_128.detach().cpu().numpy(),
-                                     test_data.edge_label.detach().cpu().numpy())
-    return score
-
-
-def link_prediction_cv(model, train_data, test_data, operator):
-    # test_data can be test/validation test. The name is rather deceiving.
-    model = model()
-
     lr_clf = LogisticRegression(max_iter=1500)
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
 
-    link_features_train_128 = operator(model[train_data.edge_label_index[0]], model[train_data.edge_label_index[1]])
-    link_features_test_128 = operator(model[test_data.edge_label_index[0]], model[test_data.edge_label_index[1]])
+    link_features_train_d_dim = operator(model[train_data.edge_label_index[0]], model[train_data.edge_label_index[1]])
+    link_features_test_d_dim = operator(model[test_data.edge_label_index[0]], model[test_data.edge_label_index[1]])
 
-    link_pred_pipeline.fit(link_features_train_128.detach().cpu().numpy(), train_data.edge_label.detach().cpu().numpy())
-    final_prediction = link_pred_pipeline.predict_proba(link_features_test_128.detach().cpu().numpy())
+    link_pred_pipeline.fit(link_features_train_d_dim.detach().cpu().numpy(),
+                           train_data.edge_label.detach().cpu().numpy())
+    final_prediction = link_pred_pipeline.predict_proba(link_features_test_d_dim.detach().cpu().numpy())
 
     positive_column = list(link_pred_pipeline.classes_).index(1)
     roc_scores = roc_auc_score(test_data.edge_label.detach().cpu().numpy(), final_prediction[:, positive_column])

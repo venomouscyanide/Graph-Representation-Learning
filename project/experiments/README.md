@@ -1,0 +1,1 @@
+Make sure the files are in the repository root path before running.
