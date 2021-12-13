@@ -26,21 +26,23 @@ class MMDTypes:
 
 class HistogramGenerator:
     def generate(self, mmd_type, predicted_graph, actual_graph):
-        bins = 100
         if mmd_type == MMDTypes.DEG_DISTRIBUTION:
             actual_histogram = np.array(nx.degree_histogram(actual_graph))
             predicted_histogram = np.array(nx.degree_histogram(predicted_graph))
         elif mmd_type == MMDTypes.CLUSTERING_COEF:
+            bins = 25
             actual_stats = list(nx.clustering(actual_graph).values())
             predicted_stats = list(nx.clustering(predicted_graph).values())
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
             predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
         elif mmd_type == MMDTypes.BETWEENESS:
+            bins = 100
             actual_stats = list(nx.betweenness_centrality(actual_graph).values())
             predicted_stats = list(nx.betweenness_centrality(predicted_graph).values())
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
             predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
         elif mmd_type == MMDTypes.CLOSENESS:
+            bins = 25
             actual_stats = list(nx.closeness_centrality(actual_graph).values())
             predicted_stats = list(nx.closeness_centrality(predicted_graph).values())
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
