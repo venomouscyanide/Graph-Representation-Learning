@@ -37,7 +37,7 @@ class DeepTableGen:
                 for type_info in ShallowConfig.types:
                     prepped_dataset = self._get_dataset(type_info, dataset)
                     print(f"Running on {model_name}_{type_info}_{dataset}")
-                    corres_file = file_map[model_name][type_info][dataset]
+                    corres_file = file_map[model_name].get(type_info).get(dataset)
                     if not corres_file:
                         mmd = "OOM"
                     else:
