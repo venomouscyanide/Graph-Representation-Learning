@@ -22,6 +22,7 @@ from project.statistics.mmd import gaussian_emd
 
 class GraphReconstructionMMD:
     def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, viz_graph=False):
+        print(f"Model reconstruction for dataset: {dataset}")
         operator = LinkOperators.hadamard
         cv = 10
         clf = link_prediction_cross_validation(model, data, data, cv, type_of_model, operator)

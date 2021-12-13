@@ -2,7 +2,7 @@ import networkx as nx
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.pyplot import show
-from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -52,12 +52,12 @@ def get_link_embedding(type_of_model, operator, model, data, arg):
     return link_embeddings
 
 
-def link_prediction_cross_validation(model, train_data, test_data, dataset, type_of_model, operator):
+def link_prediction_cross_validation(model, train_data, test_data, cv, type_of_model, operator):
     # test_data can be train/test/validation test. The name is rather deceiving.
-    # dataset as part of args is depreciated
-    cv = 10
-
-    lr_clf = LogisticRegressionCV(Cs=10, cv=cv, scoring="roc_auc", max_iter=1500)
+    if cv > 1:
+        lr_clf = LogisticRegressionCV(Cs=10, cv=cv, scoring="roc_auc", max_iter=1500)
+    else:
+        lr_clf = LogisticRegression()
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
 
     link_features_train_d_dim = get_link_embedding(type_of_model, operator, model, train_data, arg='edge_label_index')
