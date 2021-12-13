@@ -113,7 +113,7 @@ def train_mlp(train, test_data, batch_norm, device):
     mlp.eval()
     train.edge_label_index = edge_label_index
     train.edge_label = edge_label
-    link_prediction_cross_validation(mlp, train, test_data, 'dummy', TypeOfModel.MLP, operator)
+    link_prediction_cross_validation(mlp, train, test_data, 1, TypeOfModel.MLP, operator)
     return mlp
 
 

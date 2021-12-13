@@ -23,7 +23,8 @@ from project.statistics.mmd import gaussian_emd
 class GraphReconstructionMMD:
     def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, viz_graph=False):
         operator = LinkOperators.hadamard
-        clf = link_prediction_cross_validation(model, data, data, dataset, type_of_model, operator)
+        cv = 10
+        clf = link_prediction_cross_validation(model, data, data, cv, type_of_model, operator)
 
         link_pred_data = get_link_embedding(type_of_model, operator, model, data, arg='edge_index')
 
