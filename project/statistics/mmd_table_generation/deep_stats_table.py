@@ -11,7 +11,7 @@ from project.statistics.stats_capture import GraphReconstructionMMD
 from project.utils import MaxDegreeMapping
 
 
-class ShallowConfig:
+class DeepConfig:
     """
     Ordering is key here
     """
@@ -31,10 +31,10 @@ class DeepTableGen:
         files = self._get_files(base_folder)
         file_map = self._create_file_map(files)
 
-        for index, model_name in enumerate(ShallowConfig.models):
+        for index, model_name in enumerate(DeepConfig.models):
             row = [model_name.title()]
-            for dataset in ShallowConfig.datasets:
-                for type_info in ShallowConfig.types:
+            for dataset in DeepConfig.datasets:
+                for type_info in DeepConfig.types:
                     prepped_dataset = self._get_dataset(type_info, dataset)
                     print(f"Running on {model_name}_{type_info}_{dataset}")
                     corres_file = file_map[model_name].get(type_info).get(dataset)
@@ -55,8 +55,8 @@ class DeepTableGen:
         return files
 
     def _gen_table(self):
-        header = ['Model'] + [f"{dataset.title()}_{type_info}" for dataset in ShallowConfig.datasets for type_info in
-                              ShallowConfig.types]
+        header = ['Model'] + [f"{dataset.title()}_{type_info}" for dataset in DeepConfig.datasets for type_info in
+                              DeepConfig.types]
         df = pd.DataFrame(columns=header)
         return df
 
