@@ -41,17 +41,21 @@ def get_link_embedding(type_of_model, operator, model, data, arg):
     if type_of_model == TypeOfModel.DEEP:
         z = model.encode(data.x, data.edge_index)
         link_embeddings = operator(z[getattr(data, arg)[0]], z[getattr(data, arg)[1]])
-    else:
+    elif type_of_model == TypeOfModel.SHALLOW:
         model = model()
         link_embeddings = operator(model[getattr(data, arg)[0]], model[getattr(data, arg)[1]])
+    elif type_of_model == TypeOfModel.MLP:
+        out = model(data.x)
+        link_embeddings = operator(out[getattr(data, arg)[0]], out[getattr(data, arg)[1]])
+    else:
+        raise NotImplementedError
     return link_embeddings
 
 
 def link_prediction_cross_validation(model, train_data, test_data, dataset, type_of_model, operator):
     # test_data can be train/test/validation test. The name is rather deceiving.
+    # dataset as part of args is depreciated
     cv = 10
-    if dataset == 'karate':
-        cv = 2
 
     lr_clf = LogisticRegressionCV(Cs=10, cv=cv, scoring="roc_auc", max_iter=1500)
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
@@ -73,3 +77,4 @@ def link_prediction_cross_validation(model, train_data, test_data, dataset, type
 class TypeOfModel:
     DEEP: str = 'deep'
     SHALLOW: str = 'shallow'
+    MLP: str = 'mlp'
