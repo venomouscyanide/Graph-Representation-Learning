@@ -73,6 +73,9 @@ class DeepTableGen:
             type_info = f"{type_info_norm}_{type_info_deg}"
             model_name = file.split(f'_{type_info_norm}')[0]
             dataset = file.split(f"{type_info}_")[-1].split('_best_model.model')[0]
+            if dataset == 'citeceer':
+                # Spelt it wrong :'(
+                dataset = 'citeseer'
             file_map[model_name][type_info][dataset] = original_file_name
         return file_map
 
