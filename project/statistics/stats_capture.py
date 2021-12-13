@@ -1,11 +1,9 @@
 import warnings
 
-from torch_geometric import seed_everything
-
 from project.statistics.reconstruction_utils import render_graph, link_prediction_cross_validation, TypeOfModel, \
     get_link_embedding, prep_dataset
 
-seed_everything(49)
+
 warnings.filterwarnings(action='ignore')
 import torch_geometric.transforms as T
 import networkx as nx
@@ -21,10 +19,9 @@ from project.statistics.mmd import gaussian_emd
 
 
 class GraphReconstructionMMD:
-    def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, viz_graph=False):
+    def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, viz_graph=False, cv=10):
         print(f"Model reconstruction for dataset: {dataset}")
         operator = LinkOperators.hadamard
-        cv = 10
         clf = link_prediction_cross_validation(model, data, data, cv, type_of_model, operator)
 
         link_pred_data = get_link_embedding(type_of_model, operator, model, data, arg='edge_index')

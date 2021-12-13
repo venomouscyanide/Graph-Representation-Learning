@@ -14,9 +14,9 @@ class ShallowConfig:
     """
     Ordering is key here
     """
-    models = ['node_2_vec', 'dw', ]
+    models = ['mlp', 'node_2_vec', 'dw']
     # TODO: datasets = ['karate', 'cora', 'citeseer', 'pubmed', 'computers', 'photo']
-    datasets = ['karate', 'cora', 'citeseer', 'pubmed', ]
+    datasets = ['karate', 'cora', 'citeseer', 'pubmed', 'computers', 'photo']
 
 
 class GenTable:
@@ -57,7 +57,8 @@ class GenTable:
         file_map = defaultdict(dict)
 
         for file in files:
-            split_name = file.split('_no_degree_information_')
+            cleaned_file_name = file.replace('_no_norm', '')
+            split_name = cleaned_file_name.split('_no_degree_information_')
             model = split_name[0]
             dataset = split_name[-1].split('_best_model.model')[0]
             file_map[model][dataset] = file
