@@ -35,7 +35,8 @@ class GenTable:
                 print(f"Running on {model_name}_{dataset}")
                 model = torch.load(os.path.join(base_folder, corres_file), map_location=torch.device('cpu'))
                 model_type = TypeOfModel.MLP if model_name == 'mlp' else TypeOfModel.SHALLOW
-                mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, dataset, model_type)
+                mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, dataset, model_type,
+                                                                          cv=1)
 
                 row.append(mmd)
             df.loc[index] = row
