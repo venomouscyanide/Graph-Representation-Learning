@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings('ignore')
 from torch_geometric import seed_everything
 
@@ -22,6 +23,7 @@ def run_experiments(dataset, identifier, degree_information, use_norm):
 
     mlp = train_mlp(train_data, test_data, use_norm, device)
     torch.save(mlp, f'{identifier}_best_model.model')
+    print(f"Finished id: {identifier}")
 
 
 if __name__ == '__main__':
