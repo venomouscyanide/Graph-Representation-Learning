@@ -4,6 +4,7 @@ from torch import Tensor
 import torch.nn.functional as F
 from torch.nn import Linear, BatchNorm1d, Identity
 import torch
+from torch_geometric.utils import negative_sampling
 
 from project.shallow_models.utils import LinkOperators
 from project.statistics.reconstruction_utils import link_prediction_cross_validation, TypeOfModel, get_link_embedding
@@ -69,34 +70,60 @@ class MLP(torch.nn.Module):
         return f'{self.__class__.__name__}({str(self.channel_list)[1:-1]})'
 
 
-def train_mlp(train, test_data, batch_norm):
-    mlp = MLP(channel_list=[train.x.size(1), 512, train.x.size(1)], dropout=0.0, batch_norm=batch_norm,
-              relu_first=batch_norm)
+def train_mlp(train, test_data, batch_norm, device):
+    """
+    Train for link prediction downstream task
+    """
+    mlp = MLP(channel_list=[train.x.size(1), 512, train.x.size(1)], dropout=0.50, batch_norm=batch_norm,
+              relu_first=batch_norm).to(device)
     optimizer = torch.optim.Adam(params=mlp.parameters(), lr=0.001)
     criterion = torch.nn.BCEWithLogitsLoss()
     operator = LinkOperators.hadamard
 
     mlp.train()
     for epoch in range(101):
-        out = mlp(train.x)
-        link_embedding = get_link_embedding(TypeOfModel.MLP, operator, mlp, train_data, arg='edge_label_index')
-        edge_label = train_data.edge_label
+        # perform new round of neg sampling per epoch
+        neg_edge_index = negative_sampling(
+            edge_index=train.edge_index, num_nodes=train.num_nodes,
+            num_neg_samples=train.edge_label_index.size(1), method='dense')
+        neg_edge_index.to(device)
+
+        edge_label_index = torch.cat(
+            [train.edge_label_index, neg_edge_index],
+            dim=-1,
+        )
+        edge_label_index.to(device)
+
+        edge_label = torch.cat([
+            train.edge_label,
+            train.edge_label.new_zeros(neg_edge_index.size(1))
+        ], dim=0)
+        edge_label.to(device)
+
+        train.new_edge_label_index = edge_label_index
+
+        link_embedding = get_link_embedding(TypeOfModel.MLP, operator, mlp, train, arg='new_edge_label_index')
         loss = criterion(link_embedding.sum(dim=-1), edge_label)
-        print(f"Loss for epoch{epoch}: {loss.item()}")
+        if epoch % 5 == 0:
+            print(f"Loss for epoch {epoch}: {loss.item()}")
         loss.backward()
         optimizer.step()
 
+    # forward pass on test data
     mlp.eval()
-    link_prediction_cross_validation(mlp, train_data, test_data, 'dummy', TypeOfModel.MLP, operator)
+    train.edge_label_index = edge_label_index
+    train.edge_label = edge_label
+    link_prediction_cross_validation(mlp, train, test_data, 'dummy', TypeOfModel.MLP, operator)
     return mlp
 
 
 if __name__ == '__main__':
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_data, _, test_data = CustomDataLoader().load_data('karate', 'temp_delete_me', 'cpu',
-                                                            False,
+                                                            True,
                                                             False,
                                                             num_val=0.00,
                                                             num_test=0.10,
-                                                            add_negative_during_load=True)
+                                                            add_negative_during_load=False)
 
-    train_mlp(train_data, test_data, True)
+    train_mlp(train_data, test_data, True, device)
