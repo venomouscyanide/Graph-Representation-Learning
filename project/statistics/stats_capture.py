@@ -3,7 +3,6 @@ import warnings
 from project.statistics.reconstruction_utils import render_graph, link_prediction_cross_validation, TypeOfModel, \
     get_link_embedding, prep_dataset
 
-
 warnings.filterwarnings(action='ignore')
 import torch_geometric.transforms as T
 import networkx as nx
@@ -18,8 +17,41 @@ from project.utils import MaxDegreeMapping
 from project.statistics.mmd import gaussian_emd
 
 
+class MMDTypes:
+    CLUSTERING_COEF: str = 'clustering'
+    DEG_DISTRIBUTION: str = 'deg_distribution'
+    BETWEENESS: str = 'betweeness_centrality'
+    CLOSENESS: str = 'closeness_centrality'
+
+
+class HistogramGenerator:
+    def generate(self, mmd_type, predicted_graph, actual_graph):
+        bins = 100
+        if mmd_type == MMDTypes.DEG_DISTRIBUTION:
+            actual_histogram = np.array(nx.degree_histogram(actual_graph))
+            predicted_histogram = np.array(nx.degree_histogram(predicted_graph))
+        elif mmd_type == MMDTypes.CLUSTERING_COEF:
+            actual_stats = list(nx.clustering(actual_graph).values())
+            predicted_stats = list(nx.clustering(predicted_graph).values())
+            actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
+            predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
+        elif mmd_type == MMDTypes.BETWEENESS:
+            actual_stats = list(nx.betweenness_centrality(actual_graph).values())
+            predicted_stats = list(nx.betweenness_centrality(predicted_graph).values())
+            actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
+            predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
+        elif mmd_type == MMDTypes.CLOSENESS:
+            actual_stats = list(nx.closeness_centrality(actual_graph).values())
+            predicted_stats = list(nx.closeness_centrality(predicted_graph).values())
+            actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
+            predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
+        else:
+            raise NotImplementedError
+        return actual_histogram, predicted_histogram
+
+
 class GraphReconstructionMMD:
-    def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, viz_graph=False, cv=10):
+    def model_graph_reconstruction(self, data, model, dataset, type_of_model: str, mmd_type, viz_graph=False, cv=10):
         print(f"Model reconstruction for dataset: {dataset}")
         operator = LinkOperators.hadamard
         clf = link_prediction_cross_validation(model, data, data, cv, type_of_model, operator)
@@ -41,13 +73,13 @@ class GraphReconstructionMMD:
         predicted_graph.remove_edges_from(nx.selfloop_edges(predicted_graph))
         predicted_graph = predicted_graph.to_undirected()
 
-        predicted_graph_deg_histogram = np.array(nx.degree_histogram(predicted_graph))
-        actual_graph_deg_histogram = np.array(nx.degree_histogram(actual_graph))
+        predicted_graph_histogram, actual_graph_histogram = HistogramGenerator().generate(mmd_type, actual_graph,
+                                                                                          predicted_graph)
 
-        mmd = compute_mmd([actual_graph_deg_histogram], [predicted_graph_deg_histogram], kernel=gaussian_emd,
-                          is_parallel=False, is_hist=True)
+        mmd = compute_mmd([actual_graph_histogram], [predicted_graph_histogram], kernel=gaussian_emd, is_parallel=False,
+                          is_hist=True)
 
-        print("MMD", mmd)
+        print(f"MMD for {mmd_type} on {dataset} using {model} is {mmd}")
 
         if viz_graph:
             render_graph(actual_graph)
@@ -67,28 +99,24 @@ if __name__ == '__main__':
     # Link prediction score on test: 0.877564100256005
     print("Running on n2v")
     model = torch.load('node_2_vec_no_degree_information_cora_best_model.model', map_location=torch.device('cpu'))
-    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.SHALLOW)
+    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.SHALLOW,
+                                                              MMDTypes.DEG_DISTRIBUTION, cv=1)
 
     # Link prediction score on test: 0.8951243838418026
     print("Running on dw")
     model = torch.load('dw_no_degree_information_cora_best_model.model', map_location=torch.device('cpu'))
-    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.SHALLOW)
+    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.SHALLOW,
+                                                              MMDTypes.CLUSTERING_COEF, cv=1)
 
     # Best trial test set accuracy: 0.8744999621933611
     print("Running on gcn")
     model = torch.load('gcn_norm_degree_information_cora_best_model.model', map_location=torch.device('cpu'))
-    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_with_deg, model, 'cora', TypeOfModel.DEEP)
+    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_with_deg, model, 'cora', TypeOfModel.DEEP,
+                                                              MMDTypes.CLOSENESS, cv=1)
 
     # Best trial test set accuracy: 0.9356783051103775
     print("Running on id_gcn")
     model = torch.load('id_gcn_no_norm_no_degree_information_cora_best_model.model', map_location=torch.device('cpu'))
 
-    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.DEEP)
-
-    """
-    # TODO refer below and complete the clustering coefficient et al. well
-    clustering_coeffs_list = list(nx.clustering(graph_pred_list_remove_empty[i]).values())
-    hist, _ = np.histogram(
-            clustering_coeffs_list, bins=bins, range=(0.0, 1.0), density=False)
-    sample_pred.append(hist)
-    """
+    mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, 'cora', TypeOfModel.DEEP,
+                                                              MMDTypes.BETWEENESS, cv=1)

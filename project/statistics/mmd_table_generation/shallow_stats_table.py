@@ -19,7 +19,7 @@ class ShallowConfig:
 
 
 class GenTable:
-    def gen_shallow_table(self, base_folder, output_folder):
+    def gen_shallow_table(self, base_folder, output_folder, mmd_type):
         df = self._gen_table()
         files = self._get_files(base_folder)
         file_map = self._create_file_map(files)
@@ -36,8 +36,7 @@ class GenTable:
                 model = torch.load(os.path.join(base_folder, corres_file), map_location=torch.device('cpu'))
                 model_type = TypeOfModel.MLP if model_name == 'mlp' else TypeOfModel.SHALLOW
                 mmd = GraphReconstructionMMD().model_graph_reconstruction(data_sans_deg, model, dataset, model_type,
-                                                                          cv=1)
-
+                                                                          mmd_type, cv=1)
                 row.append(mmd)
             df.loc[index] = row
 
@@ -75,6 +74,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run table gen for n2v/dw shallow encoders")
     parser.add_argument('--base_folder', help='Input Folder', required=True, type=str)
     parser.add_argument('--output_folder', help='Output Folder', required=True, type=str)
+    parser.add_argument('--mmd_type', help='MMD type', required=True, type=str)
     args = parser.parse_args()
 
-    GenTable().gen_shallow_table(args.base_folder, args.output_folder)
+    GenTable().gen_shallow_table(args.base_folder, args.output_folder, args.mmd_type)
