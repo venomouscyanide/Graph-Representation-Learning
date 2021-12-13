@@ -57,7 +57,7 @@ def link_prediction_cross_validation(model, train_data, test_data, cv, type_of_m
     if cv > 1:
         lr_clf = LogisticRegressionCV(Cs=10, cv=cv, scoring="roc_auc", max_iter=1500)
     else:
-        lr_clf = LogisticRegression()
+        lr_clf = LogisticRegression(max_iter=1500)
     link_pred_pipeline = Pipeline(steps=[("sc", StandardScaler()), ("clf", lr_clf)])
 
     link_features_train_d_dim = get_link_embedding(type_of_model, operator, model, train_data, arg='edge_label_index')
