@@ -36,7 +36,7 @@ class HistogramGenerator:
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
             predicted_histogram, _ = np.histogram(predicted_stats, bins=bins, range=(0.0, 1.0), density=False)
         elif mmd_type == MMDTypes.BETWEENESS:
-            bins = 100
+            bins = 1000
             actual_stats = list(nx.betweenness_centrality(actual_graph).values())
             predicted_stats = list(nx.betweenness_centrality(predicted_graph).values())
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
