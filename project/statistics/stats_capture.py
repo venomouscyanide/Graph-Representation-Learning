@@ -30,7 +30,7 @@ class HistogramGenerator:
             actual_histogram = np.array(nx.degree_histogram(actual_graph))
             predicted_histogram = np.array(nx.degree_histogram(predicted_graph))
         elif mmd_type == MMDTypes.CLUSTERING_COEF:
-            bins = 25
+            bins = 100
             actual_stats = list(nx.clustering(actual_graph).values())
             predicted_stats = list(nx.clustering(predicted_graph).values())
             actual_histogram, _ = np.histogram(actual_stats, bins=bins, range=(0.0, 1.0), density=False)
