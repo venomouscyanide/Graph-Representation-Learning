@@ -122,7 +122,7 @@ if __name__ == '__main__':
     train_data, _, test_data = CustomDataLoader().load_data('karate', 'temp_delete_me', 'cpu',
                                                             True,
                                                             False,
-                                                            num_val=0.00,
+                                                            num_val=0.05,
                                                             num_test=0.10,
                                                             add_negative_during_load=False)
 

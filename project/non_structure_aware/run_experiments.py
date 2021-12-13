@@ -16,7 +16,7 @@ def run_experiments(dataset, identifier, degree_information, use_norm):
     train_data, _, test_data = CustomDataLoader().load_data(dataset, 'temp_delete_me', device,
                                                             True,
                                                             degree_information,
-                                                            num_val=0.00,
+                                                            num_val=0.05,
                                                             num_test=0.10,
                                                             add_negative_during_load=False)
 
