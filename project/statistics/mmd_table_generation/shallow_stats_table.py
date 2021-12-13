@@ -15,7 +15,6 @@ class ShallowConfig:
     Ordering is key here
     """
     models = ['mlp', 'node_2_vec', 'dw']
-    # TODO: datasets = ['karate', 'cora', 'citeseer', 'pubmed', 'computers', 'photo']
     datasets = ['karate', 'cora', 'citeseer', 'pubmed', 'computers', 'photo']
 
 
