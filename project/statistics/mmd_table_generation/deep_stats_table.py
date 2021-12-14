@@ -15,7 +15,7 @@ class DeepConfig:
     """
     Ordering is key here
     """
-    models = ['mlp', 'gcn', 'id_gcn', 'graph_sage', 'id_graph_sage', 'gat', 'gin', 'id_gin']
+    models = ['mlp', 'gcn', 'id_gcn', 'graph_sage', 'id_sage', 'gat', 'gin', 'id_gin']
     # 00 10 01 11
     types = ['no_norm_no_degree_information', 'norm_no_degree_information', 'no_norm_degree_information',
              'norm_degree_information']
