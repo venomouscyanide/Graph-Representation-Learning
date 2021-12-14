@@ -93,8 +93,8 @@ class DeepTableGen:
     def _write_to_file(self, df, output_folder):
         if not os.path.exists(output_folder):
             os.mkdir(output_folder)
-        df.to_csv(os.path.join(output_folder, 'shallow_stats.csv'), index=False)
-        df.to_latex(os.path.join(output_folder, 'shallow_stats.tex'), index=False)
+        df.to_csv(os.path.join(output_folder, 'deep_stats.csv'), index=False)
+        df.to_latex(os.path.join(output_folder, 'deep_stats.tex'), index=False)
 
 
 if __name__ == '__main__':
