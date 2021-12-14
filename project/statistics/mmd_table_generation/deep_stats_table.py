@@ -98,7 +98,7 @@ class DeepTableGen:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Run table gen for n2v/dw shallow encoders")
+    parser = argparse.ArgumentParser(description="Run table gen for n2v/dw deep encoders")
     parser.add_argument('--base_folder', help='Input Folder', required=True, type=str)
     parser.add_argument('--output_folder', help='Output Folder', required=True, type=str)
     parser.add_argument('--mmd_type', help='MMD type', required=True, type=str)
