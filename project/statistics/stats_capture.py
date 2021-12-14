@@ -26,6 +26,7 @@ class MMDTypes:
 
 class HistogramGenerator:
     def generate(self, mmd_type, predicted_graph, actual_graph):
+        # TODO: cache the nx results, no point in recalculating for each model
         if mmd_type == MMDTypes.DEG_DISTRIBUTION:
             actual_histogram = np.array(nx.degree_histogram(actual_graph))
             predicted_histogram = np.array(nx.degree_histogram(predicted_graph))
