@@ -1,3 +1,4 @@
+# https://github.com/pyg-team/pytorch_geometric/blob/master/examples/graph_saint.py
 import argparse
 import os.path as osp
 
@@ -9,7 +10,7 @@ from torch_geometric.loader import GraphSAINTRandomWalkSampler
 from torch_geometric.nn import GraphConv
 from torch_geometric.utils import degree
 
-path = osp.join(osp.dirname(osp.realpath(__file__)), '../../../Library/Application Support/JetBrains/PyCharm2021.2', 'data', 'Flickr')
+path = osp.join(osp.dirname(osp.realpath(__file__)), 'delete_me', 'data', 'Flickr')
 dataset = Flickr(path)
 data = dataset[0]
 row, col = data.edge_index
